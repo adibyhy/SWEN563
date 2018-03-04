@@ -47,8 +47,8 @@ void timer2_init_pin_A1(void)
 
 void timer2_init_timer2(void)
 {
-	RCC->APB1ENR1 |= 1;             // enable TIM2 clock
-	TIM2->PSC = PRESCALER_VALUE;    // load prescaler value
+  RCC->APB1ENR1 |= 1;             // enable TIM2 clock
+  TIM2->PSC = PRESCALER_VALUE;    // load prescaler value
   timer2_EGR_UpdateRegisters();
 }
 
@@ -77,12 +77,12 @@ void timer2_init_output_compare(void)
 
 void timer2_outputCompare_Start(void)
 {
-	TIM2->CR1 |= TIM_CR1_CEN;  // Enable PWM counter
+  TIM2->CR1 |= TIM_CR1_CEN;  // Enable PWM counter
 }
 
 void timer2_outputCompare_Stop(void)
 {
-	TIM2->CR1 &= ~TIM_CR1_CEN;  // Disable PWM counter
+  TIM2->CR1 &= ~TIM_CR1_CEN;  // Disable PWM counter
 }
 
 void timer2_pwm_init(void)
