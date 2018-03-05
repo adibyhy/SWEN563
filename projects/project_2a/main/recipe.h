@@ -17,11 +17,11 @@
 
 // Defines
 #define CMDSIZE_MAX      (2)
-#define RECIPE_END       (0x0)
-#define MOV              (0x1)
-#define WAIT             (0x2)
-#define LOOP             (0x4)
-#define END_LOOP         (0x5)
+#define RECIPE_END       (0x00)
+#define MOV              (0x20)
+#define WAIT             (0x40)
+#define LOOP             (0x60)
+#define END_LOOP         (0xA0)
 
 // Enum / struct
 typedef enum servo_positions
@@ -50,7 +50,6 @@ typedef enum servo_states
 {
   SS_STILL,
   SS_MOVE,
-  SS_PAUSE,
   SS_UNKNOWN
 }servoState_t;
 
@@ -66,9 +65,9 @@ typedef enum recipe_events
 
 typedef enum servo_sm_states
 {
-  IDLE,
-  RUN_RECIPE,
-  RUN_USERCMD
+  SM_IDLE,
+  SM_RUN_RECIPE,
+  SM_RUN_USERCMD
 }servoSM_t;
 
 typedef struct servo_data
