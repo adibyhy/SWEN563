@@ -119,4 +119,3 @@ void timer2_pwm_setPulsePeriod(uint16_t pulse_period)
   timer2_EGR_UpdateRegisters();
 }
 
-

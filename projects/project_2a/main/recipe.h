@@ -23,7 +23,6 @@
 #define LOOP             (0x4)
 #define END_LOOP         (0x5)
 
-
 // Enum / struct
 typedef enum servo_positions
 {
@@ -49,11 +48,21 @@ typedef enum user_cmds
 
 typedef enum servo_states
 {
-  STILL,
-  MOVE,
-  PAUSE,
-  UNKNOWN
+  SS_STILL,
+  SS_MOVE,
+  SS_PAUSE,
+  SS_UNKNOWN
 }servoState_t;
+
+typedef enum recipe_events
+{
+  RE_USERCMD,
+  RE_MOVE,
+  RE_PAUSE,
+  RE_NONE,
+  RE_ERROR,
+  RE_END
+}recipeEvent_t;
 
 typedef enum servo_sm_states
 {
@@ -66,26 +75,15 @@ typedef struct servo_data
 {
   servoPosition_t servoPosition;
   servoState_t    servoState;
+  recipeEvent_t   recipeEvent;
   userCmd_t       userCmd;
   bool            runUserCmd;
   uint8_t         recipeOperation;
 }servo_t;
 
-
 // Function prototypes
 void recipe_main(void);
 
 
-
-
-
-
-
-
-
-
-
-
 #endif /* ndef __recipe_h */
-
 
