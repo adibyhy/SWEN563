@@ -210,7 +210,7 @@ void recipe_moveServo(servoPosition_t toPosition, uint8_t whichServo)
       break;
   }
   
-  timer2_pwm_setPulseWidth(whichServo, pulseWidth);
+  timer2_pwm_setPulseWidth(whichServo, pulse_width);
 }
 
 void recipe_init_servo(void)
