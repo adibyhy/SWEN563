@@ -21,7 +21,6 @@
 
 #define SERVO_NUMBER      (2)  // Number of servos available
 
-
 static servo_t   servo[SERVO_NUMBER];
 static servoSM_t current_state = IDLE;
 
@@ -33,7 +32,6 @@ uint8_t recipe1[] =
   RECIPE_END
 };
 
-
 // Function prototypes
 void         recipe_sm(void);
 void         recipe_init_servo(void);
@@ -41,7 +39,7 @@ userCmd_t    recipe_getUserInput(void);
 bool         recipe_processUserInput(userCmd_t cmd);
 void         recipe_runUserInput(void);
 void         recipe_runOperations(uint8_t whichServo, uint8_t operation);
-
+void         recipe_moveServo(servoPosition_t toPosition, uint8_t whichServo);
 
 bool recipe_processUserInput(userCmd_t cmd)
 {
@@ -137,21 +135,38 @@ void recipe_runUserInput(void)
     switch (cmd)
     {
       case CMD_NONE:
+        servo[i].recipeEvent = RE_NONE;
         break;
       
       case CMD_PAUSE:
+        servo[i].recipeEvent = RE_PAUSE;
         break;
       
       case CMD_LEFT:
+        if (servo[i].servoPosition < SERVO_POS_5 && servo[i].userCmd == CMD_PAUSE)
+        {
+          servo[i].recipeEvent    = RE_PAUSE;
+          servo[i].servoPosition += 1;
+          recipe_moveServo(servo[i].servoPosition, i);
+        }
         break;
       
       case CMD_RIGHT:
+        if (servo[i].servoPosition > SERVO_POS_0 && servo[i].userCmd == CMD_PAUSE)
+        {
+          servo[i].recipeEvent    = RE_PAUSE;
+          servo[i].servoPosition -= 1;
+          recipe_moveServo(servo[i].servoPosition, i);
+        }
         break;
       
-      case CMD_BEGIN:
+      case CMD_BEGIN:  // restart recipe
+        servo[i].recipeEvent     = RE_MOVE;
+        servo[i].recipeOperation = 0;
         break;
       
       case CMD_CONTINUE:
+        servo[i].recipeEvent = RE_MOVE;
         break;
       
       default:
@@ -160,6 +175,12 @@ void recipe_runUserInput(void)
   }
 }
 
+void recipe_moveServo(servoPosition_t toPosition, uint8_t whichServo)
+{
+  servo[whichServo].servoPosition = toPosition;
+  servo[whichServo].servoState    = SS_MOVE;
+  // timer2_pwm_setPulseWidth(whichServo, pulseWidth);  // TODO: determine how to set the pulse width for each servo position
+}
 
 void recipe_init_servo(void)
 {
@@ -167,12 +188,12 @@ void recipe_init_servo(void)
   for (i = 0; i < SERVO_NUMBER; i++)
   {
     servo[i].servoPosition   = SERVO_POS_0;
-    servo[i].servoState      = PAUSE;
+    servo[i].servoState      = SS_PAUSE;
     servo[i].runUserCmd      = false;
     servo[i].userCmd         = CMD_NONE;
     servo[i].recipeOperation = 0;
+    servo[i].recipeEvent     = RE_NONE;
   }
-  
 }
 
 void recipe_sm(void)
@@ -185,7 +206,7 @@ void recipe_sm(void)
       break;
     
     case RUN_RECIPE:
-      if ((servo[whichServo].servoState == PAUSE) && (servo[whichServo].runUserCmd == true)) 
+      if ((servo[whichServo].servoState == SS_PAUSE) && (servo[whichServo].runUserCmd == true)) 
       {
         current_state = RUN_USERCMD;
       }
@@ -216,7 +237,6 @@ void recipe_runOperations(uint8_t whichServo, uint8_t operation)
     
 }
 
-
 void recipe_main(void)
 {
   userCmd_t cmd;
@@ -239,5 +259,4 @@ void recipe_main(void)
     recipe_sm();
   }
 }
-
 
