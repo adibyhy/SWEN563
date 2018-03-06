@@ -18,6 +18,7 @@
 #include "UART.h"
 #include "stm32l476xx.h"
 #include "recipe.h"
+#include "timer2.h"
 
 #define SERVO_NUMBER      (2)  // Number of servos available
 #define PULSEWIDTH_POS_0  (4)
@@ -26,11 +27,12 @@
 #define PULSEWIDTH_POS_3  (13)
 #define PULSEWIDTH_POS_4  (16)
 #define PULSEWIDTH_POS_5  (19)
+#define US_TO_MS          (100000)
 
 static servo_t   servo[SERVO_NUMBER];
 static servoSM_t current_state = SM_IDLE;
 
-uint8_t recipe1[] = 
+uint8_t recipe[] = 
 { 
   MOV + 0,
   MOV + 5,
@@ -211,6 +213,8 @@ void recipe_moveServo(servoPosition_t toPosition, uint8_t whichServo)
   }
   
   timer2_pwm_setPulseWidth(whichServo, pulse_width);
+  // add delay
+  USART_Delay(200*US_TO_MS);
 }
 
 void recipe_init_servo(void)
@@ -230,7 +234,7 @@ void recipe_init_servo(void)
 void recipe_sm(void)
 {
   uint8_t whichServo = 0;
-  
+  static uint8_t k = 0;  // make it global if want to use in another function
   switch (current_state)
   {
     case SM_IDLE:
@@ -245,7 +249,8 @@ void recipe_sm(void)
       else
       { 
         // run recipe
-        // recipe_runOperations(whichServo, operation);  // run one operation at a time
+        // recipe_runOperations(whichServo, recipe[k]);  // run one operation at a time
+        // k++;
       }
       break;
     
@@ -271,7 +276,7 @@ Parameters :
 ******************************************************************************/
 void recipe_runOperations(uint8_t whichServo, uint8_t operation)
 {
-  
+  uint8_t command = operation ^ 0xE0;
 }
 
 void recipe_main(void)
