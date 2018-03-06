@@ -276,7 +276,51 @@ Parameters :
 ******************************************************************************/
 void recipe_runOperations(uint8_t whichServo, uint8_t operation)
 {
-  uint8_t command = operation ^ 0xE0;
+  uint8_t opcode;     //operation top 3 bits
+  uint8_t parameter;  //operation bottom 5 bits
+  uint8_t i = 0;
+  uint8_t j = 0;
+  
+  opcode    = operation >> 5;
+  parameter = operation & 0x1F;
+  
+  //op code: move(0x2_ 0,1,2,3,4,5-positions), wait(0x40), loop(0x60)  [End loop(0xA0),Recipe_end(0x00)]-idk what to do        
+  if(opcode == 0x1)
+  {
+    recipe_moveServo(parameter, whichServo);      
+  }
+  else if(opcode == 0x2)  // WAIT
+  {
+    USART_Delay((100*US_TO_MS)*parameter);  
+  }
+  else if(opcode == 0x4)  // LOOP
+  {
+    // loopfunction(whichservo,parameter); //within call to recipe_runOperations  for the loop X times until end loop
+    
+    i++;
+    
+    if (i > 1)
+    {
+      servo[whichServo].recipeEvent = RE_ERROR; //error state if hits nested loop (RE_ERROR)
+    }
+    
+    for(j = 0; j < parameter; j++ )
+    {  
+      // recipe_runOperations(whichServo, operation);
+    }
+    
+    i = 0;
+  }
+  /*
+  else if(opcode == 0x5)  // END_LOOP
+  {
+    
+  }
+  else if(opcode == '0x00')  // RECIPE_END
+  {
+    
+  }
+  */
 }
 
 void recipe_main(void)
