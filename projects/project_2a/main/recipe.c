@@ -37,6 +37,12 @@ uint8_t recipe[] =
   MOV + 0,
   MOV + 5,
   MOV + 2,
+  LOOP + 1,  // loop twice
+  MOV + 0,
+  MOV + 1,
+  MOV + 3,
+  END_LOOP,
+  MOV + 4,
   RECIPE_END
 };
 
@@ -47,7 +53,7 @@ userCmd_t    recipe_getUserInput(void);
 bool         recipe_processUserInput(userCmd_t cmd);
 void         recipe_runUserCommand(void);
 void         recipe_runOperations(uint8_t whichServo, uint8_t operation);
-void         recipe_moveServo(servoPosition_t toPosition, uint8_t whichServo);
+void         recipe_moveServo(uint8_t toPosition, uint8_t whichServo);
 
 bool recipe_processUserInput(userCmd_t cmd)
 {
@@ -61,15 +67,12 @@ bool recipe_processUserInput(userCmd_t cmd)
   
   if ((cmd > CMD_NONE) && cmd < CMD_ENTER)
   {
-    if (whichServo < SERVO_NUMBER)
-    {
-      whichServo++;
-    }
-    else if (whichServo > SERVO_NUMBER)
+    if (whichServo >= SERVO_NUMBER)
     {
       whichServo = 0;
     }
     servo[whichServo].userCmd = cmd;
+    whichServo++;
   }
   
   if (cmd == CMD_CLEAR)
@@ -77,7 +80,8 @@ bool recipe_processUserInput(userCmd_t cmd)
     whichServo = 0;
     for (whichServo = 0; whichServo < SERVO_NUMBER; whichServo++)
     {
-      servo[whichServo].userCmd = cmd;
+      servo[whichServo].userCmd = CMD_NONE;
+      servo[whichServo].recipeOperation = 0;
     }
   }
   
@@ -140,49 +144,44 @@ void recipe_runUserCommand(void)
   for (i = 0; i < SERVO_NUMBER; i++)
   {
     cmd = servo[i].userCmd;
-    switch (cmd)
+    if (cmd == CMD_NONE)
     {
-      case CMD_NONE:
-        servo[i].recipeEvent = RE_NONE;
-        break;
-      
-      case CMD_PAUSE:
-        servo[i].recipeEvent = RE_PAUSE;
-        break;
-      
-      case CMD_LEFT:
-        if (servo[i].servoPosition < SERVO_POS_5 && servo[i].recipeEvent == RE_PAUSE)
-        {
-          servo[i].servoPosition += 1;
-          recipe_moveServo(servo[i].servoPosition, i);
-        }
-        break;
-      
-      case CMD_RIGHT:
-        if (servo[i].servoPosition > SERVO_POS_0 && servo[i].recipeEvent == RE_PAUSE)
-        {
-          servo[i].servoPosition -= 1;
-          recipe_moveServo(servo[i].servoPosition, i);
-        }
-        break;
-      
-      case CMD_BEGIN:  // restart recipe
-        servo[i].recipeEvent     = RE_MOVE;
-        servo[i].recipeOperation = 0;
-        break;
-      
-      case CMD_CONTINUE:
-        servo[i].recipeEvent = RE_MOVE;
-        break;
-      
-      default:
-        break;
+      servo[i].recipeEvent = RE_NONE;
+    }
+    else if (cmd == CMD_PAUSE)
+    {
+      servo[i].recipeEvent = RE_PAUSE;
+    }  
+    else if (cmd == CMD_LEFT)
+    {
+      if (servo[i].servoPosition < SERVO_POS_5 && servo[i].recipeEvent == RE_PAUSE)
+      {
+        servo[i].servoPosition += 1;
+        recipe_moveServo(servo[i].servoPosition, i);
+      }
+    }
+    else if (cmd == CMD_RIGHT)
+    {
+      if (servo[i].servoPosition > SERVO_POS_0 && servo[i].recipeEvent == RE_PAUSE)
+      {
+        servo[i].servoPosition -= 1;
+        recipe_moveServo(servo[i].servoPosition, i);
+      }
+    }
+    else if (cmd == CMD_BEGIN)  // restart recipe
+    {
+      servo[i].recipeEvent     = RE_MOVE;
+      servo[i].recipeOperation = 0;
+    }
+    else if (cmd == CMD_CONTINUE)
+    {
+      servo[i].recipeEvent = RE_MOVE;
     }
     servo[i].runUserCmd = false;  // reset flag after running the user command
   }
 }
 
-void recipe_moveServo(servoPosition_t toPosition, uint8_t whichServo)
+void recipe_moveServo(uint8_t toPosition, uint8_t whichServo)
 {
   uint8_t pulse_width;
   servo[whichServo].servoState = SS_MOVE;
@@ -208,13 +207,13 @@ void recipe_moveServo(servoPosition_t toPosition, uint8_t whichServo)
       pulse_width = PULSEWIDTH_POS_5;
       break;
     default:
-      pulse_width = PULSEWIDTH_POS_0;
+      // pulse_width = PULSEWIDTH_POS_0;
       break;
   }
   
   timer2_pwm_setPulseWidth(whichServo, pulse_width);
   // add delay
-  USART_Delay(200*US_TO_MS);
+  // USART_Delay(1*US_TO_MS);
 }
 
 void recipe_init_servo(void)
@@ -233,8 +232,9 @@ void recipe_init_servo(void)
 
 void recipe_sm(void)
 {
-  uint8_t whichServo = 0;
-  static uint8_t k = 0;  // make it global if want to use in another function
+  uint8_t whichServo   = 0;
+  uint8_t recipe_index;
+  
   switch (current_state)
   {
     case SM_IDLE:
@@ -245,12 +245,24 @@ void recipe_sm(void)
       if (servo[whichServo].runUserCmd == true) 
       {
         current_state = SM_RUN_USERCMD;
+	    for (whichServo = 0; whichServo < 2; whichServo++)
+        {
+          servo[whichServo].runUserCmd = false;
+        }
       }
       else
       { 
-        // run recipe
-        // recipe_runOperations(whichServo, recipe[k]);  // run one operation at a time
-        // k++;
+        for (whichServo = 0; whichServo < SERVO_NUMBER; whichServo++)
+        {
+          recipe_index = servo[whichServo].recipeOperation;
+          if (recipe_index < sizeof(recipe))
+          {
+            recipe_runOperations(whichServo, recipe[recipe_index]);  // run one operation at a time
+            servo[whichServo].recipeOperation++;
+          }
+        }
+
+        current_state = SM_IDLE;
       }
       break;
     
@@ -287,11 +299,11 @@ void recipe_runOperations(uint8_t whichServo, uint8_t operation)
   //op code: move(0x2_ 0,1,2,3,4,5-positions), wait(0x40), loop(0x60)  [End loop(0xA0),Recipe_end(0x00)]-idk what to do        
   if(opcode == 0x1)
   {
-    recipe_moveServo(parameter, whichServo);      
+    recipe_moveServo(parameter, whichServo);
   }
   else if(opcode == 0x2)  // WAIT
   {
-    USART_Delay((100*US_TO_MS)*parameter);  
+    // USART_Delay((100*US_TO_MS)*parameter);  
   }
   else if(opcode == 0x4)  // LOOP
   {
@@ -316,11 +328,11 @@ void recipe_runOperations(uint8_t whichServo, uint8_t operation)
   {
     
   }
-  else if(opcode == '0x00')  // RECIPE_END
-  {
-    
-  }
   */
+  else if(opcode == 0x0)  // RECIPE_END
+  {
+    servo[i].recipeOperation = 0;
+  }
 }
 
 void recipe_main(void)

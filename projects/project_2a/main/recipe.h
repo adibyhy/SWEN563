@@ -77,7 +77,8 @@ typedef struct servo_data
   recipeEvent_t   recipeEvent;
   userCmd_t       userCmd;
   bool            runUserCmd;
-  uint8_t         recipeOperation;
+  uint8_t         recipeOperation;      // recipe index
+  uint8_t         recipeLoopOperation;  // recipe loop index
 }servo_t;
 
 // Function prototypes
