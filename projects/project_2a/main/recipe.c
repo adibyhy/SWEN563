@@ -31,6 +31,8 @@
 
 static servo_t   servo[SERVO_NUMBER];
 static servoSM_t current_state = SM_IDLE;
+static uint8_t loop_index;     //global declaration of the index so it can be constantly used in the loop
+static uint8_t loop_iteration; //global declaration of the iteration so it can be constantly used in the loop
 
 uint8_t recipe[] = 
 { 
@@ -52,7 +54,7 @@ void         recipe_init_servo(void);
 userCmd_t    recipe_getUserInput(void);
 bool         recipe_processUserInput(userCmd_t cmd);
 void         recipe_runUserCommand(void);
-void         recipe_runOperations(uint8_t whichServo, uint8_t operation);
+void         recipe_runOperations(uint8_t whichServo, uint8_t operation, uint8_t recipe_index);
 void         recipe_moveServo(uint8_t toPosition, uint8_t whichServo);
 
 bool recipe_processUserInput(userCmd_t cmd)
@@ -245,7 +247,7 @@ void recipe_sm(void)
       if (servo[whichServo].runUserCmd == true) 
       {
         current_state = SM_RUN_USERCMD;
-	    for (whichServo = 0; whichServo < 2; whichServo++)
+        for (whichServo = 0; whichServo < 2; whichServo++)
         {
           servo[whichServo].runUserCmd = false;
         }
@@ -257,7 +259,7 @@ void recipe_sm(void)
           recipe_index = servo[whichServo].recipeOperation;
           if (recipe_index < sizeof(recipe))
           {
-            recipe_runOperations(whichServo, recipe[recipe_index]);  // run one operation at a time
+            recipe_runOperations(whichServo, recipe[recipe_index], recipe_index);  // run one operation at a time
             servo[whichServo].recipeOperation++;
           }
         }
@@ -277,7 +279,7 @@ void recipe_sm(void)
 }
 
 /******************************************************************************
-function   : recipe_runOperations(uint8_t whichServo, uint8_t operation)
+function   : void recipe_runOperations(uint8_t whichServo, uint8_t operation, uint8_t recipe_index)
 Description: Runs the individual recipe command listed in recipe array.
 Parameters : 
 1. whichServo: Specifies which servo (1 or 2) is operating
@@ -285,13 +287,13 @@ Parameters :
                Bit 0:4 is the parameter, bit 5:7 is the opcode
                Example: MOV + 5. Bits (7 downto 0): 0010 0101
                001 is the opcode of MOV, 101 is the servo position (5) to move to.
+3. recipe_index:
 ******************************************************************************/
-void recipe_runOperations(uint8_t whichServo, uint8_t operation)
+void recipe_runOperations(uint8_t whichServo, uint8_t operation, uint8_t recipe_index)
 {
   uint8_t opcode;     //operation top 3 bits
   uint8_t parameter;  //operation bottom 5 bits
-  uint8_t i = 0;
-  uint8_t j = 0;
+  static uint8_t i = 0;
   
   opcode    = operation >> 5;
   parameter = operation & 0x1F;
@@ -301,13 +303,16 @@ void recipe_runOperations(uint8_t whichServo, uint8_t operation)
   {
     recipe_moveServo(parameter, whichServo);
   }
+  
   else if(opcode == 0x2)  // WAIT
   {
     // USART_Delay((100*US_TO_MS)*parameter);  
   }
+  
   else if(opcode == 0x4)  // LOOP
   {
-    // loopfunction(whichservo,parameter); //within call to recipe_runOperations  for the loop X times until end loop
+    loop_index = recipe_index + 1;//set index to the first command in the loop (i.e set a save point to loop back to)
+    loop_iteration = parameter + 1;  //Use the recipe_index from previous function to make this truly work
     
     i++;
     
@@ -315,23 +320,24 @@ void recipe_runOperations(uint8_t whichServo, uint8_t operation)
     {
       servo[whichServo].recipeEvent = RE_ERROR; //error state if hits nested loop (RE_ERROR)
     }
-    
-    for(j = 0; j < parameter; j++ )
-    {  
-      // recipe_runOperations(whichServo, operation);
-    }
-    
-    i = 0;
   }
-  /*
+
   else if(opcode == 0x5)  // END_LOOP
   {
-    
+    if (loop_iteration == 0)
+    {
+      i = 0;
+    }
+    else if(loop_iteration > 0)
+    {
+      loop_iteration--;
+      recipe_runOperations(whichServo, loop_index, 0);//loop recipe back to the index
+    }
   }
-  */
+  
   else if(opcode == 0x0)  // RECIPE_END
   {
-    servo[i].recipeOperation = 0;
+    servo[whichServo].recipeOperation = 0;
   }
 }
 
