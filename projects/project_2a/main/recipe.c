@@ -14,11 +14,13 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <string.h>
 #include "UART.h"
 #include "stm32l476xx.h"
 #include "recipe.h"
 #include "timer2.h"
+#include "timer5.h"
 
 #define SERVO_NUMBER      (2)  // Number of servos available
 #define PULSEWIDTH_POS_0  (4)
@@ -55,7 +57,7 @@ userCmd_t    recipe_getUserInput(void);
 bool         recipe_processUserInput(userCmd_t cmd);
 void         recipe_runUserCommand(void);
 void         recipe_runOperations(uint8_t whichServo, uint8_t operation, uint8_t recipe_index);
-void         recipe_moveServo(uint8_t toPosition, uint8_t whichServo);
+void         recipe_moveServo(uint8_t toPosition, uint8_t whichServo, uint8_t fromPosition);
 
 bool recipe_processUserInput(userCmd_t cmd)
 {
@@ -140,7 +142,8 @@ userCmd_t recipe_getUserInput(void)
 
 void recipe_runUserCommand(void)
 {
-  uint8_t   i   = 0;
+  uint8_t   i            = 0;
+  uint8_t   fromPosition = 0;
   userCmd_t cmd;
   
   for (i = 0; i < SERVO_NUMBER; i++)
@@ -158,16 +161,18 @@ void recipe_runUserCommand(void)
     {
       if (servo[i].servoPosition < SERVO_POS_5 && servo[i].recipeEvent == RE_PAUSE)
       {
+        fromPosition = servo[i].servoPosition;
         servo[i].servoPosition += 1;
-        recipe_moveServo(servo[i].servoPosition, i);
+        recipe_moveServo(servo[i].servoPosition, i, fromPosition);
       }
     }
     else if (cmd == CMD_RIGHT)
     {
       if (servo[i].servoPosition > SERVO_POS_0 && servo[i].recipeEvent == RE_PAUSE)
       {
+        fromPosition = servo[i].servoPosition;
         servo[i].servoPosition -= 1;
-        recipe_moveServo(servo[i].servoPosition, i);
+        recipe_moveServo(servo[i].servoPosition, i, fromPosition);
       }
     }
     else if (cmd == CMD_BEGIN)  // restart recipe
@@ -183,9 +188,11 @@ void recipe_runUserCommand(void)
   }
 }
 
-void recipe_moveServo(uint8_t toPosition, uint8_t whichServo)
+void recipe_moveServo(uint8_t toPosition, uint8_t whichServo, uint8_t fromPosition)
 {
   uint8_t pulse_width;
+  uint8_t i;
+  uint8_t delay;
   servo[whichServo].servoState = SS_MOVE;
   
   switch (toPosition)
@@ -209,13 +216,16 @@ void recipe_moveServo(uint8_t toPosition, uint8_t whichServo)
       pulse_width = PULSEWIDTH_POS_5;
       break;
     default:
-      // pulse_width = PULSEWIDTH_POS_0;
       break;
   }
-  
+  servo[whichServo].servoPosition = (servoPosition_t)toPosition;
   timer2_pwm_setPulseWidth(whichServo, pulse_width);
-  // add delay
-  // USART_Delay(1*US_TO_MS);
+
+  delay = abs(toPosition - fromPosition);
+  for (i = 0; i < delay*2 ; i++)  // timer5_delay is 100 millisecond, multiple by 2 to get 200ms for each servo movement
+  {
+    timer5_delay();
+  }
 }
 
 void recipe_init_servo(void)
@@ -234,7 +244,7 @@ void recipe_init_servo(void)
 
 void recipe_sm(void)
 {
-  uint8_t whichServo   = 0;
+  static uint8_t whichServo   = 0;
   uint8_t recipe_index;
   
   switch (current_state)
@@ -254,13 +264,17 @@ void recipe_sm(void)
       }
       else
       { 
-        for (whichServo = 0; whichServo < SERVO_NUMBER; whichServo++)
+        for (whichServo = 0; whichServo < SERVO_NUMBER; whichServo++)  // whichServo is not incrementing
         {
-          recipe_index = servo[whichServo].recipeOperation;
-          if (recipe_index < sizeof(recipe))
+          if (servo[whichServo].recipeEvent == RE_MOVE)
           {
-            recipe_runOperations(whichServo, recipe[recipe_index], recipe_index);  // run one operation at a time
-            servo[whichServo].recipeOperation++;
+            recipe_index = servo[whichServo].recipeOperation;
+            if (recipe_index < sizeof(recipe))
+            {
+              recipe_runOperations(whichServo, recipe[recipe_index], recipe_index); // run one operation at a time
+              servo[whichServo].recipeOperation++;
+              timer5_delay();
+            }
           }
         }
 
@@ -293,6 +307,9 @@ void recipe_runOperations(uint8_t whichServo, uint8_t operation, uint8_t recipe_
 {
   uint8_t opcode;     //operation top 3 bits
   uint8_t parameter;  //operation bottom 5 bits
+  uint8_t fromPosition = 0;
+  uint8_t j            = 0;
+  
   static uint8_t i = 0;
   
   opcode    = operation >> 5;
@@ -301,12 +318,16 @@ void recipe_runOperations(uint8_t whichServo, uint8_t operation, uint8_t recipe_
   //op code: move(0x2_ 0,1,2,3,4,5-positions), wait(0x40), loop(0x60)  [End loop(0xA0),Recipe_end(0x00)]-idk what to do        
   if(opcode == 0x1)
   {
-    recipe_moveServo(parameter, whichServo);
+    fromPosition = servo[whichServo].servoPosition;
+    recipe_moveServo(parameter, whichServo, fromPosition);
   }
   
   else if(opcode == 0x2)  // WAIT
   {
-    // USART_Delay((100*US_TO_MS)*parameter);  
+    for (j = 0; j < parameter + 1; j++) // will delay at least once
+    {
+      timer5_delay();
+    }
   }
   
   else if(opcode == 0x4)  // LOOP
