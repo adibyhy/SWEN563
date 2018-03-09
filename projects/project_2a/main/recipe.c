@@ -21,34 +21,56 @@
 #include "recipe.h"
 #include "timer2.h"
 #include "timer5.h"
+#include "LED.h"
 
 #define SERVO_NUMBER      (2)  // Number of servos available
-#define PULSEWIDTH_POS_0  (4)
-#define PULSEWIDTH_POS_1  (7)
-#define PULSEWIDTH_POS_2  (10)
-#define PULSEWIDTH_POS_3  (13)
-#define PULSEWIDTH_POS_4  (16)
-#define PULSEWIDTH_POS_5  (19)
-#define US_TO_MS          (100000)
+#define SERVO_ONE         (0)
+#define SERVO_TWO         (1)
 
 static servo_t   servo[SERVO_NUMBER];
 static servoSM_t current_state = SM_IDLE;
-static uint8_t loop_index;     //global declaration of the index so it can be constantly used in the loop
-static uint8_t loop_iteration; //global declaration of the iteration so it can be constantly used in the loop
-
-uint8_t recipe[] = 
+uint8_t recipe0[] = 
 { 
   MOV + 0,
   MOV + 5,
   MOV + 2,
   LOOP + 1,  // loop twice
+  LOOP + 1,  // loop twice
   MOV + 0,
   MOV + 1,
   MOV + 3,
   END_LOOP,
+  WAIT + 31,
+  WAIT + 31,
+  WAIT + 31,
   MOV + 4,
+  MOV + 5,
+  MOV + 0,
+  MOV + 4,
+  WAIT + 1,
   RECIPE_END
-};
+};  // for servo 1
+
+uint8_t recipe1[] = 
+{ 
+  MOV + 3,
+  MOV + 5,
+  MOV + 1,
+  LOOP + 1,  // loop twice
+  MOV + 3,
+  MOV + 2,
+  MOV + 0,
+  END_LOOP,
+  WAIT + 3,
+  MOV + 4,
+  MOV + 1,
+  MOV + 3,
+  MOV + 4,
+  WAIT + 3,
+  RECIPE_END
+};  // for servo 2
+
+uint8_t *recipe[2] = {recipe0, recipe1};
 
 // Function prototypes
 void         recipe_sm(void);
@@ -86,6 +108,14 @@ bool recipe_processUserInput(userCmd_t cmd)
     {
       servo[whichServo].userCmd = CMD_NONE;
       servo[whichServo].recipeOperation = 0;
+    }
+  }
+  if(cmd == CMD_ERROR)
+  {
+    whichServo = 0;
+    for (whichServo = 0; whichServo < SERVO_NUMBER; whichServo++)
+    {
+      servo[whichServo].userCmd = CMD_ERROR;
     }
   }
   
@@ -136,6 +166,10 @@ userCmd_t recipe_getUserInput(void)
     cmd = CMD_ENTER;
     USART_Write(USART2, (uint8_t *)"\r\n>", 3);
   }
+  else if (rxByte > 0)
+  {
+    cmd = CMD_ERROR;
+  }
   
   return cmd;
 }
@@ -156,6 +190,8 @@ void recipe_runUserCommand(void)
     else if (cmd == CMD_PAUSE)
     {
       servo[i].recipeEvent = RE_PAUSE;
+      Green_LED_Off();
+      Red_LED_Off();
     }  
     else if (cmd == CMD_LEFT)
     {
@@ -183,6 +219,11 @@ void recipe_runUserCommand(void)
     else if (cmd == CMD_CONTINUE)
     {
       servo[i].recipeEvent = RE_MOVE;
+    }
+    else if (cmd == CMD_ERROR)
+    {
+      Red_LED_On();
+      Green_LED_Off();
     }
     servo[i].runUserCmd = false;  // reset flag after running the user command
   }
@@ -233,18 +274,23 @@ void recipe_init_servo(void)
   uint8_t i = 0;
   for (i = 0; i < SERVO_NUMBER; i++)
   {
-    servo[i].servoPosition   = SERVO_POS_0;
-    servo[i].servoState      = SS_UNKNOWN;
-    servo[i].runUserCmd      = false;
-    servo[i].userCmd         = CMD_NONE;
-    servo[i].recipeOperation = 0;
-    servo[i].recipeEvent     = RE_PAUSE;
+    servo[i].servoPosition         = SERVO_POS_0;
+    servo[i].servoState            = SS_UNKNOWN;
+    servo[i].runUserCmd            = false;
+    servo[i].userCmd               = CMD_NONE;
+    servo[i].recipeEvent           = RE_PAUSE;
+    servo[i].recipeOperation       = 0;
+    servo[i].recipeLoopIndex       = 0;
+    servo[i].recipeLoopIteration   = 0;
+    servo[i].recipeLoopError       = 0;
+    
+    
   }
 }
 
 void recipe_sm(void)
 {
-  static uint8_t whichServo   = 0;
+  uint8_t whichServo   = 0;
   uint8_t recipe_index;
   
   switch (current_state)
@@ -254,13 +300,9 @@ void recipe_sm(void)
       break;
     
     case SM_RUN_RECIPE:
-      if (servo[whichServo].runUserCmd == true) 
+      if ((servo[whichServo].runUserCmd == true) || (servo[whichServo+1].runUserCmd == true))
       {
         current_state = SM_RUN_USERCMD;
-        for (whichServo = 0; whichServo < 2; whichServo++)
-        {
-          servo[whichServo].runUserCmd = false;
-        }
       }
       else
       { 
@@ -271,9 +313,10 @@ void recipe_sm(void)
             recipe_index = servo[whichServo].recipeOperation;
             if (recipe_index < sizeof(recipe))
             {
-              recipe_runOperations(whichServo, recipe[recipe_index], recipe_index); // run one operation at a time
+              recipe_runOperations(whichServo, recipe[whichServo][recipe_index], recipe_index); // run one operation at a time
               servo[whichServo].recipeOperation++;
-              timer5_delay();
+              Green_LED_On();
+              Red_LED_Off();
             }
           }
         }
@@ -310,12 +353,9 @@ void recipe_runOperations(uint8_t whichServo, uint8_t operation, uint8_t recipe_
   uint8_t fromPosition = 0;
   uint8_t j            = 0;
   
-  static uint8_t i = 0;
-  
   opcode    = operation >> 5;
   parameter = operation & 0x1F;
   
-  //op code: move(0x2_ 0,1,2,3,4,5-positions), wait(0x40), loop(0x60)  [End loop(0xA0),Recipe_end(0x00)]-idk what to do        
   if(opcode == 0x1)
   {
     fromPosition = servo[whichServo].servoPosition;
@@ -330,35 +370,42 @@ void recipe_runOperations(uint8_t whichServo, uint8_t operation, uint8_t recipe_
     }
   }
   
-  else if(opcode == 0x4)  // LOOP
+  else if(opcode == 0x3)  // LOOP
   {
-    loop_index = recipe_index + 1;//set index to the first command in the loop (i.e set a save point to loop back to)
-    loop_iteration = parameter + 1;  //Use the recipe_index from previous function to make this truly work
+    servo[whichServo].recipeLoopIndex     = recipe_index + 1;  // set index to the first command in the loop (i.e set a save point to loop back to)
+    servo[whichServo].recipeLoopIteration = parameter + 1;     // Use the recipe_index from previous function to make this truly work
+    servo[whichServo].recipeOperation     = servo[whichServo].recipeLoopIndex;
+    servo[whichServo].recipeLoopError++;
     
-    i++;
-    
-    if (i > 1)
+    if (servo[whichServo].recipeLoopError > 1)
     {
-      servo[whichServo].recipeEvent = RE_ERROR; //error state if hits nested loop (RE_ERROR)
+      servo[whichServo].recipeEvent     = RE_ERROR; //error state if hits nested loop
+      servo[whichServo].recipeOperation = 0;
+      servo[whichServo].recipeLoopIndex = 0;
+      servo[whichServo].recipeLoopIteration = 0;
+      Red_LED_On();
+      Green_LED_On();
     }
   }
 
   else if(opcode == 0x5)  // END_LOOP
   {
-    if (loop_iteration == 0)
+    if (servo[whichServo].recipeLoopIteration <= 0)
     {
-      i = 0;
+      servo[whichServo].recipeLoopError = 0;
     }
-    else if(loop_iteration > 0)
+    else if(servo[whichServo].recipeLoopIteration > 0)
     {
-      loop_iteration--;
-      recipe_runOperations(whichServo, loop_index, 0);//loop recipe back to the index
+      servo[whichServo].recipeLoopIteration--;
+      servo[whichServo].recipeOperation = servo[whichServo].recipeLoopIndex;
     }
   }
   
   else if(opcode == 0x0)  // RECIPE_END
   {
     servo[whichServo].recipeOperation = 0;
+    servo[whichServo].recipeEvent     = RE_END;
+    servo[whichServo].recipeLoopError = 0;
   }
 }
 
@@ -381,6 +428,7 @@ void recipe_main(void)
         servo[i].runUserCmd = true;
       }
     }
+    timer5_delay();
     recipe_sm();
   }
 }

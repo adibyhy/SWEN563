@@ -15,6 +15,8 @@
 *********************************************
 */
 
+#include <stdbool.h>
+
 // Defines
 #define CMDSIZE_MAX      (2)
 #define RECIPE_END       (0x00)
@@ -22,6 +24,13 @@
 #define WAIT             (0x40)
 #define LOOP             (0x60)
 #define END_LOOP         (0xA0)
+
+#define PULSEWIDTH_POS_0  (6)
+#define PULSEWIDTH_POS_1  (8)
+#define PULSEWIDTH_POS_2  (10)
+#define PULSEWIDTH_POS_3  (13)
+#define PULSEWIDTH_POS_4  (16)
+#define PULSEWIDTH_POS_5  (18)
 
 // Enum / struct
 typedef enum servo_positions
@@ -43,7 +52,8 @@ typedef enum user_cmds
   CMD_BEGIN,
   CMD_CONTINUE,
   CMD_ENTER,
-  CMD_CLEAR
+  CMD_CLEAR,
+  CMD_ERROR
 }userCmd_t;
 
 typedef enum servo_states
@@ -78,7 +88,9 @@ typedef struct servo_data
   userCmd_t       userCmd;
   bool            runUserCmd;
   uint8_t         recipeOperation;      // recipe index
-  uint8_t         recipeLoopOperation;  // recipe loop index
+  uint8_t         recipeLoopIndex;      // recipe loop index
+  uint8_t         recipeLoopIteration;  // how many times loop should run
+  uint8_t         recipeLoopError;
 }servo_t;
 
 // Function prototypes

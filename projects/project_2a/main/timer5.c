@@ -25,6 +25,7 @@ void timer5_init_timer3(void);
 
 void timer5_delay(void)
 {
+  timer5_EGR_UpdateRegisters();
   TIM5->SR &= ~TIM_SR_UIF;  // Clear the update event flag
   TIM5->ARR = DELAY_COUNT;
   // Loop until the update event flag is set

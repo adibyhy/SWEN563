@@ -19,11 +19,13 @@
 #include "timer2.h"
 #include "timer5.h"
 #include "recipe.h"
+#include "LED.h"
 
 int main (void)
 { 
   System_Clock_Init();
   UART2_Init();
+  LED_Init();
   timer2_pwm_init();
   timer5_init();
   
