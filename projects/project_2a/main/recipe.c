@@ -283,8 +283,6 @@ void recipe_init_servo(void)
     servo[i].recipeLoopIndex       = 0;
     servo[i].recipeLoopIteration   = 0;
     servo[i].recipeLoopError       = 0;
-    
-    
   }
 }
 
@@ -306,7 +304,7 @@ void recipe_sm(void)
       }
       else
       { 
-        for (whichServo = 0; whichServo < SERVO_NUMBER; whichServo++)  // whichServo is not incrementing
+        for (whichServo = 0; whichServo < SERVO_NUMBER; whichServo++)
         {
           if (servo[whichServo].recipeEvent == RE_MOVE)
           {
