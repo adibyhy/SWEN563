@@ -17,25 +17,23 @@
 #include "SysClock.h"
 #include "UART.h"
 #include "timer2.h"
+#include "timer5.h"
 #include "recipe.h"
+#include "LED.h"
 
 int main (void)
-{
-  //bool runMain = true;
-  
+{ 
   System_Clock_Init();
   UART2_Init();
+  LED_Init();
   timer2_pwm_init();
+  timer5_init();
   
   USART_Write(USART2, (uint8_t *)"Project 2A\r\n", 12);
   USART_Write(USART2, (uint8_t *)"\r>", 2);
-  
+    
   recipe_main();
-//  while (runMain)
-//  {
-//    recipe_main();
-//  }
-  
+
   return (0);
 }
 

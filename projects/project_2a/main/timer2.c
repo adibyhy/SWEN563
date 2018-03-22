@@ -15,9 +15,9 @@
 #include <stdio.h>
 #include "stm32l476xx.h"
 #include "timer2.h"
+#include "recipe.h"
 
 #define PRESCALER_VALUE           (8000)  // 0.1 milliseconds per count
-#define PWM_PULSE_WIDTH           (4)
 #define PWM_PULSE_PERIOD          (200)
 
 // Function prototypes
@@ -94,8 +94,8 @@ void timer2_pwm_init(void)
   timer2_outputCompare_Start();
   
   timer2_pwm_setPulsePeriod(PWM_PULSE_PERIOD);
-  timer2_pwm_setPulseWidth(SERVO_0, PWM_PULSE_WIDTH);
-  timer2_pwm_setPulseWidth(SERVO_1, PWM_PULSE_WIDTH);
+  timer2_pwm_setPulseWidth(SERVO_0, PULSEWIDTH_POS_0);
+  timer2_pwm_setPulseWidth(SERVO_1, PULSEWIDTH_POS_0);
 }
 
 void timer2_pwm_setPulseWidth(uint8_t servo, uint8_t pulse_width)
@@ -118,5 +118,4 @@ void timer2_pwm_setPulsePeriod(uint16_t pulse_period)
   TIM2->ARR = count;
   timer2_EGR_UpdateRegisters();
 }
-
 
