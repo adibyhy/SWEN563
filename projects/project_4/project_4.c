@@ -19,9 +19,10 @@
 #include <time.h>
 
 // Definitions
-#define THREADS_MAX                   (4)       // Number of threads to be created
-#define QUEUE_ARRIVALTIME_MIN         (60)      // second
-#define QUEUE_ARRIVALTIME_MAX         (240)     // second
+#define THREADS_MAX                                    (4)                // Number of threads to be created
+#define QUEUE_ARRIVALTIME_MIN                          (60)               // second
+#define QUEUE_ARRIVALTIME_MAX                          (240)              // second
+#define TIME_CONVERTTO_SIMULATIONMILLISECOND           (1.6666666666667f)
 
 // Variables
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -79,13 +80,18 @@ void thread_create(void)
 
 void* threadFn_queue(void* arg)
 {
-  int time_arrival;
+  int newCust_arrivalTime;
+  float x;
 
   printf("This is threadFn_queue(), thread number is %d\n", (int) arg);
 //  printf("This is threadFn_queue()\n");
 
-  time_arrival = RNG_get(QUEUE_ARRIVALTIME_MIN, QUEUE_ARRIVALTIME_MAX);
-  printf("Arrival time is %d\n", time_arrival);
+  newCust_arrivalTime = RNG_get(QUEUE_ARRIVALTIME_MIN, QUEUE_ARRIVALTIME_MAX);
+  x = newCust_arrivalTime*(TIME_CONVERTTO_SIMULATIONMILLISECOND);
+  printf("Arrival time is %d\n", newCust_arrivalTime);
+  printf("Simulation delay is %d milliseconds\n", (int)x);
+
+  delay((int)x);
 
   return 0;
 }
@@ -121,7 +127,7 @@ int main(int argc, char *argv[])
 
   thread_create();
 
-  sleep(1);
+  sleep(42);  //0900-1600 business hours
 
   return EXIT_SUCCESS;
 }
