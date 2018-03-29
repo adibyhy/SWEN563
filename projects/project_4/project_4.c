@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include "queue.h"
 
 // Definitions
 #define THREADS_MAX                                    (4)                // Number of threads to be created
