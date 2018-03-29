@@ -70,12 +70,6 @@ void thread_create(void)
       exit(EXIT_FAILURE);
     }
   }
-
-//  result = pthread_create(&thread_0, NULL, threadFn_queue, NULL);
-//  result = pthread_create(&thread_1, NULL, threadFn_teller0, NULL);
-//  result = pthread_create(&thread_2, NULL, threadFn_teller1, NULL);
-//  result = pthread_create(&thread_3, NULL, threadFn_teller2, NULL);
-
 }
 
 void* threadFn_queue(void* arg)
@@ -84,7 +78,6 @@ void* threadFn_queue(void* arg)
   float x;
 
   printf("This is threadFn_queue(), thread number is %d\n", (int) arg);
-//  printf("This is threadFn_queue()\n");
 
   newCust_arrivalTime = RNG_get(QUEUE_ARRIVALTIME_MIN, QUEUE_ARRIVALTIME_MAX);
   x = newCust_arrivalTime*(TIME_CONVERTTO_SIMULATIONMILLISECOND);
@@ -99,21 +92,21 @@ void* threadFn_queue(void* arg)
 void* threadFn_teller0(void* arg)
 {
   printf("This is threadFn_teller0(), thread number is %d\n", (int) arg);
-//  printf("This is threadFn_teller0()\n");
+
   return 0;
 }
 
 void* threadFn_teller1(void* arg)
 {
   printf("This is threadFn_teller1(), thread number is %d\n", (int) arg);
-//  printf("This is threadFn_teller1()\n");
+
   return 0;
 }
 
 void* threadFn_teller2(void* arg)
 {
   printf("This is threadFn_teller2(), thread number is %d\n", (int) arg);
-//  printf("This is threadFn_teller2()\n");
+
   return 0;
 }
 
