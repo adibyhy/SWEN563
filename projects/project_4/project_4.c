@@ -16,6 +16,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <errno.h>
 #include <time.h>
 #include "queue.h"
 
@@ -27,6 +28,7 @@
 
 // Variables
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+queue_t* g_queue;
 
 // Function prototypes
 void thread_create(void);
@@ -75,18 +77,34 @@ void thread_create(void)
 
 void* threadFn_queue(void* arg)
 {
-  int newCust_arrivalTime;
-  float x;
+  int   result;
+  int   newCust_arrivalTime;
+  float delay_time;
+  while (1)
+  {
+    result = pthread_mutex_lock(&mutex);
+    if (result == EOK)
+    {
+      // printf("This is threadFn_queue(), thread number is %d\n", (int) arg);
 
-  printf("This is threadFn_queue(), thread number is %d\n", (int) arg);
+      newCust_arrivalTime = RNG_get(QUEUE_ARRIVALTIME_MIN, QUEUE_ARRIVALTIME_MAX);
+      delay_time          = newCust_arrivalTime*(TIME_CONVERTTO_SIMULATIONMILLISECOND);
 
-  newCust_arrivalTime = RNG_get(QUEUE_ARRIVALTIME_MIN, QUEUE_ARRIVALTIME_MAX);
-  x = newCust_arrivalTime*(TIME_CONVERTTO_SIMULATIONMILLISECOND);
-  printf("Arrival time is %d\n", newCust_arrivalTime);
-  printf("Simulation delay is %d milliseconds\n", (int)x);
+      g_queue->cust_available += 1;  // do this in another function, queue_enqueue()
 
-  delay((int)x);
+      printf("Arrival time is %d\n", newCust_arrivalTime);
+      printf("Simulation delay is %d milliseconds\n", (int)delay_time);
 
+
+
+      delay((int)delay_time);
+    }
+    else
+    {
+      printf ("pthread_mutex_lock() failed: %d\n", result);
+    }
+    result = pthread_mutex_unlock(&mutex);
+  }
   return 0;
 }
 
@@ -115,13 +133,14 @@ void* threadFn_teller2(void* arg)
 int main(int argc, char *argv[])
 {
   srand(time(NULL));
-  // queue_create();
+  g_queue = queue_createQueue();
+  queue_initQueue(g_queue);
 
   printf("Welcome to the Bank Flow Simulator!\n");
 
   thread_create();
 
-  sleep(42);  //0900-1600 business hours
+  sleep(1);  //42 = 0900-1600 business hours
 
   return EXIT_SUCCESS;
 }
