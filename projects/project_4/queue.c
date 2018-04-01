@@ -12,8 +12,21 @@
  *********************************************
  */
 
+#include <pthread.h>
 #include <stdlib.h>
 #include "queue.h"
+
+// Definitions
+
+// Variables
+pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+
+// Function prototypes
+
+
+
+// Start
 
 queue_t* queue_createQueue(void)
 {
@@ -26,9 +39,77 @@ queue_t* queue_createQueue(void)
 
 void queue_initQueue(queue_t* queue)
 {
-  queue->cust_maxQueue  = (int*)malloc(sizeof(int)*QUEUE_MAX);
-  queue->cust_available = 0;
-  queue->front          = 0;
-  queue->rear           = 0;
+  queue->array           = (int*)malloc(sizeof(int)*QUEUE_MAX);
+  queue->capacity        = 0;
+  queue->size            = 0;
+  queue->front           = 0;
+  queue->rear            = 0;
+}
+
+void queue_enqueue(queue_t* queue, int element)
+{
+  pthread_mutex_lock(&queue_mutex);
+
+  if(queue->size == queue->capacity)
+  {
+    //do nothing because the line is full
+  }
+  else
+  {
+    queue->size++; //adds a person to the line
+    queue->rear = queue->rear + 1;
+
+    if (queue->rear == queue->capacity)
+    {
+      queue->rear = 0;
+    }
+    queue->array[queue->rear] = element;
+  }
+  pthread_mutex_unlock(&queue_mutex);
+}
+
+void queue_dequeue(queue_t* queue)
+{
+  pthread_mutex_lock(&queue_mutex);
+
+  if (queue->size == 0)
+  {
+    //Check is there anyone in the Queue (if this runs there isn't)
+  }
+  else
+  {
+    queue->size--;
+    queue->front++;
+
+    if(queue->front == queue->capacity)
+    {
+      queue->front = 0;
+    }
+  }
+  pthread_mutex_unlock(&queue_mutex);
+}
+
+int queue_front(queue_t* queue)
+{
+  if(queue->size == 0)
+  {
+    return 0; //The queue is empty
+  }
+  else
+  {
+    return queue->array[queue->front];
+  }
+}
+
+int queue_rear(queue_t* queue)
+{
+  if(queue->size == 0)
+  {
+    return 0; //The queue is empty
+  }
+  else
+  {
+    return queue->array[queue->rear];
+  }
 }
 

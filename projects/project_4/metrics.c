@@ -15,6 +15,16 @@
 #include "metrics.h"
 #include "queue.h"
 
+// Definitions
+
+// Variables
+
+
+// Function prototypes
+
+
+// Start
+
 void metrics_getMetrics(queue_t* queue)
 {
 

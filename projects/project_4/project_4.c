@@ -28,15 +28,18 @@
 
 // Variables
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-queue_t* g_queue;
+queue_t*        g_queue;
 
 // Function prototypes
-void thread_create(void);
-void* threadFn_queue(void* arg);
-void* threadFn_teller0(void* arg);
-void* threadFn_teller1(void* arg);
-void* threadFn_teller2(void* arg);
-int   RNG_get(int lower, int upper);
+void    thread_create(void);
+void*   threadFn_queue(void* arg);
+void*   threadFn_teller0(void* arg);
+void*   threadFn_teller1(void* arg);
+void*   threadFn_teller2(void* arg);
+int     RNG_get(int lower, int upper);
+
+
+// Start
 
 int RNG_get(int lower, int upper)
 {
@@ -51,8 +54,6 @@ int RNG_get(int lower, int upper)
   return rand_scaled;
 }
 
-
-
 void thread_create(void)
 {
   pthread_t thread_0;
@@ -60,7 +61,7 @@ void thread_create(void)
   pthread_t thread_2;
   pthread_t thread_3;
   void*     threads[]   = {&thread_0, &thread_1, &thread_2, &thread_3};
-  void*     threadsFn[] = {threadFn_queue, threadFn_teller0, threadFn_teller1, threadFn_teller2, "\0"};
+  void*     threadsFn[] = {threadFn_queue, threadFn_teller0, threadFn_teller1, threadFn_teller2};
   int       result = 0;
   int       k;
 
@@ -89,8 +90,6 @@ void* threadFn_queue(void* arg)
 
       newCust_arrivalTime = RNG_get(QUEUE_ARRIVALTIME_MIN, QUEUE_ARRIVALTIME_MAX);
       delay_time          = newCust_arrivalTime*(TIME_CONVERTTO_SIMULATIONMILLISECOND);
-
-      g_queue->cust_available += 1;  // do this in another function, queue_enqueue()
 
       printf("Arrival time is %d\n", newCust_arrivalTime);
       printf("Simulation delay is %d milliseconds\n", (int)delay_time);
@@ -129,7 +128,6 @@ void* threadFn_teller2(void* arg)
   return 0;
 }
 
-
 int main(int argc, char *argv[])
 {
   srand(time(NULL));
@@ -140,7 +138,7 @@ int main(int argc, char *argv[])
 
   thread_create();
 
-  sleep(1);  //42 = 0900-1600 business hours
+  sleep(1);  // 42 = 0900-1600 business hours
 
   return EXIT_SUCCESS;
 }
