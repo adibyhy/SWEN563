@@ -13,7 +13,9 @@
  */
 
 #include <pthread.h>
+#include <errno.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "queue.h"
 
 // Definitions
@@ -48,44 +50,61 @@ void queue_initQueue(queue_t* queue)
 
 void queue_enqueue(queue_t* queue, int element)
 {
-  pthread_mutex_lock(&queue_mutex);
-
-  if(queue->size == queue->capacity)
+  int result;
+  result = pthread_mutex_lock(&queue_mutex);
+  if (result == EOK)
   {
-    //do nothing because the line is full
+    if(queue->size == queue->capacity)
+    {
+      //do nothing because the line is full
+    }
+    else
+    {
+      queue->size++; //adds a person to the line
+      queue->rear = queue->rear + 1;
+
+      if (queue->rear == queue->capacity)
+      {
+        queue->rear = 0;
+      }
+      queue->array[queue->rear] = element;
+    }
   }
   else
   {
-    queue->size++; //adds a person to the line
-    queue->rear = queue->rear + 1;
-
-    if (queue->rear == queue->capacity)
-    {
-      queue->rear = 0;
-    }
-    queue->array[queue->rear] = element;
+    printf ("pthread_mutex_lock(&queue_mutex) failed: %d\n", result);
   }
+
   pthread_mutex_unlock(&queue_mutex);
 }
 
 void queue_dequeue(queue_t* queue)
 {
-  pthread_mutex_lock(&queue_mutex);
+  int result;
+  result = pthread_mutex_lock(&queue_mutex);
 
-  if (queue->size == 0)
+  if (result == EOK)
   {
-    //Check is there anyone in the Queue (if this runs there isn't)
+    if (queue->size == 0)
+    {
+      //Check is there anyone in the Queue (if this runs there isn't)
+    }
+    else
+    {
+      queue->size--;
+      queue->front++;
+
+      if(queue->front == queue->capacity)
+      {
+        queue->front = 0;
+      }
+    }
   }
   else
   {
-    queue->size--;
-    queue->front++;
-
-    if(queue->front == queue->capacity)
-    {
-      queue->front = 0;
-    }
+    printf ("pthread_mutex_lock(&queue_mutex) failed: %d\n", result);
   }
+
   pthread_mutex_unlock(&queue_mutex);
 }
 
