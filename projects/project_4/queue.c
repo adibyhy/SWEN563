@@ -19,7 +19,7 @@
 #include "queue.h"
 
 // Definitions
-
+#define QUEUE_MAX_CAPACITY        (420)
 // Variables
 pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
 
@@ -41,8 +41,8 @@ queue_t* queue_createQueue(void)
 
 void queue_initQueue(queue_t* queue)
 {
-  queue->array           = (int*)malloc(sizeof(int)*QUEUE_MAX);
-  queue->capacity        = 0;
+  queue->array           = (int*)malloc(sizeof(int)*QUEUE_MAX_CAPACITY);
+  queue->capacity        = QUEUE_MAX_CAPACITY;
   queue->size            = 0;
   queue->front           = 0;
   queue->rear            = 0;

@@ -18,26 +18,36 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
+#include <unistd.h>
 #include "teller.h"
 
 // Definitions
+#define TIME_NANOTOSECOND  (1000000000L)    // convert time in nanosecond to second
+#define TIME_NANOTOMILLI   (1000000L)       // convert time in nanosecond to nanosecond
+#define TIME_SECTOMILLI    (1000)           // conver time in second to millisecond
+#define TIME_CONVERTTO_SIMULATIONMILLISECOND           (1.6666666666667f)
 
 // Variables
 pthread_mutex_t teller_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Function prototypes
-struct timespec* teller_getTimeDifference(struct timespec* current, struct timespec* old);
+double teller_getTimeDifference(struct timespec* current, struct timespec* old);
+int teller_getDelayTime(int time);
 
 // Start
 
-struct timespec* teller_getTimeDifference(struct timespec* current, struct timespec* old)
+int teller_getDelayTime(int time)
 {
-  struct timespec* result;
+  float result;
+  result = time*TIME_CONVERTTO_SIMULATIONMILLISECOND;
+  return (int)result;
+}
 
-  result = (struct timespec*)malloc(sizeof(result));
+double teller_getTimeDifference(struct timespec* current, struct timespec* old)
+{
+  double result;
 
-  result->tv_sec  = current->tv_sec - old->tv_sec;
-  result->tv_nsec = current->tv_nsec - old->tv_nsec;
+  result = (current->tv_sec - old->tv_sec) + (double)(current->tv_nsec - old->tv_nsec)/TIME_NANOTOSECOND;
 
   return result;
 }
@@ -47,22 +57,22 @@ void teller_runTeller(queue_t* queue, teller_t* teller)
 {
   int result;
   struct timespec* time_meetTeller;
-  struct timespec* time_custWaitInQueue;
+  double time_custWaitInQueue;
 
   time_meetTeller = (struct timespec*)malloc(sizeof(time_meetTeller));
-  time_custWaitInQueue = (struct timespec*)malloc(sizeof(time_custWaitInQueue));
 
   result = pthread_mutex_lock(&teller_mutex);
 
   if (result == EOK)
   {
-    // printf("Second: %d nsec:%ld \n ", teller->time_custEnterQueue->tv_sec, teller->time_custEnterQueue->tv_nsec);
-    // teller->current_customer = queue_front(queue);
-    clock_gettime(CLOCK_REALTIME, time_meetTeller);
+    teller->current_customer = queue_front(queue);
+    delay(teller_getDelayTime(teller->current_customer));
 
+    clock_gettime(CLOCK_REALTIME, time_meetTeller);
     teller->time_custMeetTeller = time_meetTeller;
-    time_custWaitInQueue = teller_getTimeDifference(teller->time_custMeetTeller, teller->time_custEnterQueue);
-    printf("Second: %d nsec:%ld \n ", time_custWaitInQueue->tv_sec, time_custWaitInQueue->tv_nsec);
+    time_custWaitInQueue = teller_getTimeDifference(teller->time_custMeetTeller, teller->time_custEnterQueue)*TIME_SECTOMILLI;
+
+    printf("Millisecond: %f \n", time_custWaitInQueue);
   }
   else
   {

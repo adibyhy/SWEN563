@@ -90,7 +90,10 @@ void* threadFn_queue(void* arg)
   float delay_time;
   struct timespec* time_cust_enterQueue;
 
+  printf("This is threadFn_queue(), thread number is %d\n", (int) arg);
+
   time_cust_enterQueue = (struct timespec*)malloc(sizeof(time_cust_enterQueue));
+
   while (1)
   {
     if (g_bank_open)
@@ -98,30 +101,36 @@ void* threadFn_queue(void* arg)
       result = pthread_mutex_lock(&mutex);
       if (result == EOK)
       {
-        // printf("This is threadFn_queue(), thread number is %d\n", (int) arg);
-
         newCust_arrivalTime     = RNG_get(QUEUE_ARRIVALTIME_MIN, QUEUE_ARRIVALTIME_MAX);
         newCust_transactionTime = RNG_get(QUEUE_TRANSACTIONTIME_MIN, QUEUE_TRANSACTIONTIME_MAX);
         delay_time              = newCust_arrivalTime*(TIME_CONVERTTO_SIMULATIONMILLISECOND);
 
-        delay((int)delay_time);
+        clock_gettime(CLOCK_REALTIME, time_cust_enterQueue);
+        g_teller0->time_custEnterQueue = time_cust_enterQueue;
+
+        // int timer_settime(timer_t timerid, int flags, struct itimerspec* value, struct itimerspec* ovalue);
+
+
+
+
+
+        delay((int)delay_time);  // wait for customer to get into queue
+
         // printf("Arrival time is %d\n", newCust_arrivalTime);
         printf("Simulation delay is %d milliseconds\n", (int)delay_time);
         queue_enqueue(g_queue, newCust_transactionTime);
 
-        clock_gettime(CLOCK_REALTIME, time_cust_enterQueue);
-        g_teller0->time_custEnterQueue = time_cust_enterQueue;
+        result = pthread_mutex_unlock(&mutex);
+        system(0);
       }
       else
       {
         printf ("pthread_mutex_lock(&mutex) failed: %d\n", result);
       }
-      result = pthread_mutex_unlock(&mutex);
-      break;
     }
     else
     {
-
+      break;  // Out of business hours, bank is closed
     }
   }
   return 0;
@@ -131,7 +140,7 @@ void* threadFn_teller0(void* arg)
 {
   int result;
 
-  // printf("This is threadFn_teller0(), thread number is %d\n", (int) arg);
+  printf("This is threadFn_teller0(), thread number is %d\n", (int) arg);
 
   while(1)
   {
@@ -139,13 +148,17 @@ void* threadFn_teller0(void* arg)
 
     if (result == EOK)
     {
-      teller_runTeller(g_queue, g_teller0);
+      if (g_queue->size > 0)
+      {
+        teller_runTeller(g_queue, g_teller0);
+      }
+      result = pthread_mutex_unlock(&mutex);
+      system(0);
     }
     else
     {
       printf ("pthread_mutex_lock(&mutex) failed: %d\n", result);
     }
-    result = pthread_mutex_unlock(&mutex);
   }
   return 0;
 }
@@ -168,6 +181,11 @@ int main(int argc, char *argv[])
 {
   srand(time(NULL));
 
+  // int timer_create(clockid_t clock_id, struct sigevent *event, timer_t *timerid);
+
+
+
+
   g_queue = queue_createQueue();
   queue_initQueue(g_queue);
 
@@ -179,7 +197,7 @@ int main(int argc, char *argv[])
   g_bank_open = true;
   thread_create();
 
-  sleep(1);  // 42 = 0900-1600 business hours
+  sleep(3);  // 42 = 0900-1600 business hours
   g_bank_open = false;
 
   return EXIT_SUCCESS;

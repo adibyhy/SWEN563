@@ -16,7 +16,6 @@
 #define QUEUE_
 
 // Definitions
-#define QUEUE_MAX             (420)
 
 // Structs
 typedef struct queue
