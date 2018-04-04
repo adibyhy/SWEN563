@@ -23,7 +23,12 @@
 // Function prototypes
 
 void metrics_getMetrics(queue_t* queue);
-
+void metrics_getCustomerTotal(int queueCustomer);
+void metrics_getCustomerServed(int whichTeller);
+void metrics_getCustQueueWaitTime(int timeSpentInQueue);
+void metrics_getCustTransactionTime(int transactionTime);
+void metrics_getTellerWaitTime(int tellerWaitTime);
+void metrics_getQueueMaxDepth(int queueSize);
 
 
 

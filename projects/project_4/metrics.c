@@ -27,5 +27,5 @@
 
 void metrics_getMetrics(queue_t* queue)
 {
-
+  // print out all metric here
 }

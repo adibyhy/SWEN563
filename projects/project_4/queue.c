@@ -45,7 +45,7 @@ void queue_initQueue(queue_t* queue)
   queue->capacity        = QUEUE_MAX_CAPACITY;
   queue->size            = 0;
   queue->front           = 0;
-  queue->rear            = 0;
+  queue->rear            = QUEUE_MAX_CAPACITY-1;
 }
 
 void queue_enqueue(queue_t* queue, int element)

@@ -23,14 +23,16 @@
 // Struct
 typedef struct teller
 {
-  int             current_customer;
+  int              current_customer;
+  int              time_tellerWaitForCustMax;
+  int              teller_id;
   struct timespec* time_custEnterQueue;
   struct timespec* time_custMeetTeller;
 }teller_t;
 
 // Function prototypes
 teller_t* teller_createTeller(void);
-void      teller_initTeller(teller_t* teller);
-void      teller_runTeller(queue_t* queue, teller_t* teller);
+void      teller_initTeller(teller_t* teller, int id);
+void      teller_runTeller(queue_t* queue, teller_t* teller, struct timespec* time_custEnterQueue);
 
 #endif /* TELLER_H_ */
