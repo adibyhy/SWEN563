@@ -32,12 +32,14 @@
 #define QUEUE_TRANSACTIONTIME_MAX                      (480)              // second
 #define TIME_CONVERTTO_SIMULATIONMILLISECOND           (1.6666666666667f)
 #define TIME_MILLISECONDTONANO                         (1000000L)    // convert time in millisecond to nanosecond
+#define BUSINESS_HOURS                                 (42000)  // in millisecond, 42 second = 7 hours 0900-1600
 #define CLOCKID                                        CLOCK_REALTIME
 #define SIG                                            SIGUSR1
 #define CODE_TIMER                                     (1)       // pulse from timer
 #define TELLER0_ID                                     (0)
 #define TELLER1_ID                                     (1)
 #define TELLER2_ID                                     (2)
+#define PRINT_DEBUG_MESSAGE                            (0)
 
 // Variables
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -147,14 +149,11 @@ void* threadFn_queue(void* arg)
   int   newCust_arrivalTime;
   int   newCust_transactionTime;
   float delay_time;
-//  struct timespec* time_cust_enterQueue;
 
 //  int rcvid;              // process ID of the sender
 //  MessageT msg;           // the message itself
 
   printf("This is threadFn_queue(), thread number is %d\n", (int) arg);
-
-  // time_cust_enterQueue = (struct timespec*)malloc(sizeof(time_cust_enterQueue));
 
   while (1)
   {
@@ -170,10 +169,14 @@ void* threadFn_queue(void* arg)
         clock_gettime(CLOCK_REALTIME, &time_cust_enterQueue);
         delay((int)(delay_time-1.0));  // wait for customer to get into queue
 
-//        printf("Transaction time: %d \n", newCust_transactionTime);
         queue_enqueue(g_queue, newCust_transactionTime);  // add new customer to the queue
 //        g_runTeller = true;
 
+#if PRINT_DEBUG_MESSAGE
+//        printf("Queue thread: Arrival time    : %d\n", newCust_arrivalTime);
+        printf("Queue thread: Transaction time: %d\n", newCust_transactionTime);
+        printf("Queue thread: Queue wait time : %f\n", delay_time);
+#endif
         // determine who the message came from
 //        rcvid = MsgReceive (chid, &msg, sizeof (msg), NULL);
 //        if (rcvid == 0)
@@ -185,9 +188,6 @@ void* threadFn_queue(void* arg)
 //        {
 //          printf("Didn't get pulse\n");;
 //        }
-
-//        printf("Arrival time is %d\n", newCust_arrivalTime);
-//        printf("Simulation delay is %d milliseconds\n", (int)delay_time);
 
         result = pthread_mutex_unlock(&mutex);
         if (result == EOK)
@@ -332,22 +332,23 @@ int main(int argc, char *argv[])
   teller_initTeller(g_teller1, TELLER1_ID);
   teller_initTeller(g_teller2, TELLER2_ID);
 
-  if ((chid = ChannelCreate (0)) == -1)
-  {
-    fprintf (stderr, "couldn't create channel!\n");
-    perror (NULL);
-    exit (EXIT_FAILURE);
-  }
+//  if ((chid = ChannelCreate (0)) == -1)
+//  {
+//    fprintf (stderr, "couldn't create channel!\n");
+//    perror (NULL);
+//    exit (EXIT_FAILURE);
+//  }
 
-  setupPulseAndTimer();
+//  setupPulseAndTimer();
 
   printf("Welcome to the Bank Flow Simulator!\n");
 
   g_bank_open = true;
   thread_create();
 
-  sleep(42);  // 42 = 0900-1600 business hours
+  delay(BUSINESS_HOURS);  // 42 = 0900-1600 business hours
   g_bank_open = false;
+  printf("Bank is now closed!\n");
 
   return EXIT_SUCCESS;
 }
