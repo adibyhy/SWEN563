@@ -12,21 +12,15 @@
  *********************************************
  */
 
-#include <pthread.h>
-#include <errno.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include "queue.h"
 
 // Definitions
 #define QUEUE_MAX_CAPACITY        (420)
-// Variables
-pthread_mutex_t queue_mutex = PTHREAD_MUTEX_INITIALIZER;
 
+// Variables
 
 // Function prototypes
-
-
 
 // Start
 
@@ -50,62 +44,39 @@ void queue_initQueue(queue_t* queue)
 
 void queue_enqueue(queue_t* queue, int element)
 {
-  int result;
-  result = pthread_mutex_lock(&queue_mutex);
-  if (result == EOK)
+  if(queue->size == queue->capacity)
   {
-    if(queue->size == queue->capacity)
-    {
-      //do nothing because the line is full
-    }
-    else
-    {
-      queue->size++; //adds a person to the line
-      queue->rear = queue->rear + 1;
-
-      if (queue->rear == queue->capacity)
-      {
-        queue->rear = 0;
-      }
-      queue->array[queue->rear] = element;
-    }
+    //do nothing because the line is full
   }
   else
   {
-    printf ("pthread_mutex_lock(&queue_mutex) failed: %d\n", result);
-  }
+    queue->size++; //adds a person to the line
+    queue->rear = queue->rear + 1;
 
-  pthread_mutex_unlock(&queue_mutex);
+    if (queue->rear == queue->capacity)
+    {
+      queue->rear = 0;
+    }
+    queue->array[queue->rear] = element;
+  }
 }
 
 void queue_dequeue(queue_t* queue)
 {
-  int result;
-  result = pthread_mutex_lock(&queue_mutex);
-
-  if (result == EOK)
+  if (queue->size == 0)
   {
-    if (queue->size == 0)
-    {
-      //Check is there anyone in the Queue (if this runs there isn't)
-    }
-    else
-    {
-      queue->size--;
-      queue->front++;
-
-      if(queue->front == queue->capacity)
-      {
-        queue->front = 0;
-      }
-    }
+    //Check is there anyone in the Queue (if this runs there isn't)
   }
   else
   {
-    printf ("pthread_mutex_lock(&queue_mutex) failed: %d\n", result);
-  }
+    queue->size--;
+    queue->front++;
 
-  pthread_mutex_unlock(&queue_mutex);
+    if(queue->front == queue->capacity)
+    {
+      queue->front = 0;
+    }
+  }
 }
 
 int queue_front(queue_t* queue)

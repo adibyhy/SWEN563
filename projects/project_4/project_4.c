@@ -17,10 +17,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
-#include <errno.h>
 #include <time.h>
-#include <sys/siginfo.h>
-#include <sys/neutrino.h>
 #include "queue.h"
 #include "teller.h"
 #include "metrics.h"
@@ -91,55 +88,39 @@ void thread_create(void)
       exit(EXIT_FAILURE);
     }
   }
+//  pthread_join(thread_0, NULL);
+//  pthread_join(thread_1, NULL);
+//  pthread_join(thread_2, NULL);
+//  pthread_join(thread_3, NULL);
 }
 
 void* threadFn_queue(void* arg)
 {
-  int   result;
   int   newCust_arrivalTime;
   int   newCust_transactionTime;
   float delay_time;
 
-  printf("This is threadFn_queue(), thread number is %d\n", (int) arg);
+//  printf("This is threadFn_queue(), thread number is %d\n", (int) arg);
 
   while (1)
   {
     if (g_bank_open)
     {
-      result = pthread_mutex_lock(&mutex);
-      if (result == EOK)
-      {
-        newCust_arrivalTime     = RNG_get(QUEUE_ARRIVALTIME_MIN, QUEUE_ARRIVALTIME_MAX);
-        newCust_transactionTime = RNG_get(QUEUE_TRANSACTIONTIME_MIN, QUEUE_TRANSACTIONTIME_MAX);
-        delay_time              = newCust_arrivalTime*(TIME_CONVERTTO_SIMULATIONMILLISECOND);
+      newCust_arrivalTime     = RNG_get(QUEUE_ARRIVALTIME_MIN, QUEUE_ARRIVALTIME_MAX);
+      newCust_transactionTime = RNG_get(QUEUE_TRANSACTIONTIME_MIN, QUEUE_TRANSACTIONTIME_MAX);
+      delay_time              = newCust_arrivalTime*(TIME_CONVERTTO_SIMULATIONMILLISECOND);
 
-        clock_gettime(CLOCK_REALTIME, &time_cust_enterQueue);
-        delay((int)(delay_time-1.0));  // wait for customer to get into queue
+      delay((int)(delay_time-1.0));  // wait for customer to get into queue
 
-        queue_enqueue(g_queue, newCust_transactionTime);  // add new customer to the queue
-        metrics_getCustTransactionTime(newCust_transactionTime);
+      clock_gettime(CLOCK_REALTIME, &time_cust_enterQueue);
+
+      queue_enqueue(g_queue, newCust_transactionTime);  // add new customer to the queue
 
 #if PRINT_DEBUG_MESSAGE
-//        printf("Queue thread: Arrival time    : %d\n", newCust_arrivalTime);
-        printf("Queue thread: Transaction time: %d\n", newCust_transactionTime);
-        printf("Queue thread: Queue wait time : %f\n", delay_time);
+//      printf("Queue thread: Arrival time    : %d\n", newCust_arrivalTime);
+      printf("Queue thread: Transaction time: %d\n", newCust_transactionTime);
+      printf("Queue thread: Queue wait time : %f\n", delay_time);
 #endif
-
-        result = pthread_mutex_unlock(&mutex);
-        if (result == EOK)
-        {
-          //system(0);
-        }
-        else
-        {
-          printf ("pthread_mutex_unlock(&mutex) failed: %d\n", result);
-        }
-
-      }
-      else  // if (result == EOK)
-      {
-        printf ("pthread_mutex_lock(&mutex) failed: %d\n", result);
-      }
     }
     else  // if (g_bank_open)
     {
@@ -153,32 +134,18 @@ void* threadFn_teller0(void* arg)
 {
   int result;
 
-  printf("This is threadFn_teller0(), thread number is %d\n", (int) arg);
+//  printf("This is threadFn_teller0(), thread number is %d\n", (int) arg);
 
   while(1)
   {
     result = pthread_mutex_lock(&mutex);
-
-    if (result == EOK)
+    if (g_queue->size > 0)
     {
-      if (g_queue->size > 0)
-      {
-        teller_runTeller(g_queue, g_teller0, &time_cust_enterQueue);
-      }
       result = pthread_mutex_unlock(&mutex);
-      if (result == EOK)
-      {
-        //system(0);
-      }
-      else
-      {
-        printf ("pthread_mutex_unlock(&mutex) failed: %d\n", result);
-      }
+      teller_runTeller(g_queue, g_teller0, &time_cust_enterQueue);
+
     }
-    else
-    {
-      printf ("pthread_mutex_lock(&mutex) failed: %d\n", result);
-    }
+
   }
   return 0;
 }
@@ -187,32 +154,18 @@ void* threadFn_teller1(void* arg)
 {
   int result;
 
-  printf("This is threadFn_teller1(), thread number is %d\n", (int) arg);
+//  printf("This is threadFn_teller1(), thread number is %d\n", (int) arg);
 
   while(1)
   {
     result = pthread_mutex_lock(&mutex);
-
-    if (result == EOK)
+    if (g_queue->size > 0)
     {
-      if (g_queue->size > 0)
-      {
-        teller_runTeller(g_queue, g_teller1, &time_cust_enterQueue);
-      }
       result = pthread_mutex_unlock(&mutex);
-      if (result == EOK)
-      {
-        //system(0);
-      }
-      else
-      {
-        printf ("pthread_mutex_unlock(&mutex) failed: %d\n", result);
-      }
+      teller_runTeller(g_queue, g_teller1, &time_cust_enterQueue);
+
     }
-    else
-    {
-      printf ("pthread_mutex_lock(&mutex) failed: %d\n", result);
-    }
+
   }
   return 0;
 }
@@ -221,32 +174,18 @@ void* threadFn_teller2(void* arg)
 {
   int result;
 
-  printf("This is threadFn_teller2(), thread number is %d\n", (int) arg);
+//  printf("This is threadFn_teller2(), thread number is %d\n", (int) arg);
 
   while(1)
   {
     result = pthread_mutex_lock(&mutex);
-
-    if (result == EOK)
+    if (g_queue->size > 0)
     {
-      if (g_queue->size > 0)
-      {
-        teller_runTeller(g_queue, g_teller2, &time_cust_enterQueue);
-      }
       result = pthread_mutex_unlock(&mutex);
-      if (result == EOK)
-      {
-        //system(0);
-      }
-      else
-      {
-        printf ("pthread_mutex_unlock(&mutex) failed: %d\n", result);
-      }
+      teller_runTeller(g_queue, g_teller2, &time_cust_enterQueue);
+
     }
-    else
-    {
-      printf ("pthread_mutex_lock(&mutex) failed: %d\n", result);
-    }
+
   }
   return 0;
 }

@@ -14,18 +14,15 @@
 
 // Includes
 #include <pthread.h>
-#include <errno.h>
-#include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
 #include <unistd.h>
 #include "teller.h"
 #include "metrics.h"
 
 // Definitions
 #define TIME_NANOTOSECOND                              (1000000000.0)    // convert time in nanosecond to second
-#define TIME_NANOTOMILLI                               (1000000L)       // convert time in nanosecond to nanosecond
-#define TIME_SECTOMILLI                                (1000)           // conver time in second to millisecond
+#define TIME_NANOTOMILLI                               (1000000L)        // convert time in nanosecond to nanosecond
+#define TIME_SECTOMILLI                                (1000)            // conver time in second to millisecond
 #define TIME_CONVERTTO_SIMULATIONMILLISECOND           (1.6666666666667f)
 #define PRINT_DEBUG_MESSAGE                            (0)
 
@@ -34,11 +31,11 @@ pthread_mutex_t teller_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Function prototypes
 double teller_getTimeDifference(struct timespec* current, struct timespec* old);
-int teller_getDelayTime(int time);
+int teller_getSimulationTime(int time);
 
 // Start
 
-int teller_getDelayTime(int time)
+int teller_getSimulationTime(int time)
 {
   float result;
   result = time*TIME_CONVERTTO_SIMULATIONMILLISECOND;
@@ -57,7 +54,7 @@ double teller_getTimeDifference(struct timespec* current, struct timespec* old)
 
 void teller_runTeller(queue_t* queue, teller_t* teller, struct timespec* time_custEnterQueue)
 {
-  int              result;
+  int              delay_transactionTime;
   double           time_custWaitInQueue;
   double           time_tellerWaitForCustomer;
   struct timespec* time_meetTeller;  // time it takes for the customer to meet the teller
@@ -66,41 +63,39 @@ void teller_runTeller(queue_t* queue, teller_t* teller, struct timespec* time_cu
   time_meetTeller        = (struct timespec*)malloc(sizeof(time_meetTeller));
   time_tellerWaitForCust = (struct timespec*)malloc(sizeof(time_tellerWaitForCust));
 
-  result = pthread_mutex_lock(&teller_mutex);
+  pthread_mutex_lock(&teller_mutex);
+  metrics_getQueueMaxDepth(queue->size);
+  pthread_mutex_unlock(&teller_mutex);
 
-  if (result == EOK)
-  {
-    clock_gettime(CLOCK_REALTIME, time_meetTeller);
-    teller->time_custMeetTeller = time_meetTeller;
-    time_custWaitInQueue        = teller_getTimeDifference(teller->time_custMeetTeller, time_custEnterQueue)*TIME_SECTOMILLI;
+  clock_gettime(CLOCK_REALTIME, time_meetTeller);
+  teller->time_custMeetTeller = time_meetTeller;
+  time_custWaitInQueue        = teller_getTimeDifference(teller->time_custMeetTeller, time_custEnterQueue)*TIME_SECTOMILLI;
+  time_custWaitInQueue        = teller_getSimulationTime(time_custWaitInQueue);
 
-    metrics_getQueueMaxDepth(queue->size);
-    teller->current_customer = queue_front(queue);
-    queue_dequeue(queue);
-    delay(teller_getDelayTime(teller->current_customer)-1);
+  pthread_mutex_lock(&teller_mutex);
+  teller->current_customer = queue_front(queue);
+  queue_dequeue(queue);
+  pthread_mutex_unlock(&teller_mutex);
 
-    clock_gettime(CLOCK_REALTIME, time_tellerWaitForCust);
-    time_tellerWaitForCustomer = teller_getTimeDifference(teller->time_custMeetTeller, time_tellerWaitForCust);
+  delay_transactionTime = teller_getSimulationTime(teller->current_customer);
+  delay(delay_transactionTime);
 
-    if (teller->time_tellerWaitForCustMax < (int)time_tellerWaitForCustomer)
-    {
-      teller->time_tellerWaitForCustMax = (int)time_tellerWaitForCustomer;
-    }
+  clock_gettime(CLOCK_REALTIME, time_tellerWaitForCust);
+  time_tellerWaitForCustomer = teller_getTimeDifference(time_tellerWaitForCust, teller->time_custMeetTeller)*TIME_SECTOMILLI;
+  time_tellerWaitForCustomer = teller_getSimulationTime(time_tellerWaitForCustomer);
+
 #if PRINT_DEBUG_MESSAGE
-    printf("TellerID %d: Queue wait time : %f \n", teller->teller_id, time_custWaitInQueue);
-    printf("TellerID %d: Transaction time: %d \n", teller->teller_id, teller->current_customer);
+  printf("TellerID %d doing transaction\n", teller->teller_id);
+//  printf("TellerID %d: Queue wait time : %f \n", teller->teller_id, time_custWaitInQueue);
+//  printf("TellerID %d: Transaction time: %d \n", teller->teller_id, delay_transactionTime);
+//  printf("TellerID %d: Teller wait time: %f \n", teller->teller_id, time_tellerWaitForCustomer);
 #endif
-    metrics_getCustQueueWaitTime(time_custWaitInQueue); //sending the customers time in queue to be evaluated for metrics
-    metrics_getCustomerServed(teller->teller_id);
-    metrics_getTellerWaitTimeMax((int)time_tellerWaitForCustomer);
-    metrics_getTellerWaitTimeSum((int)time_tellerWaitForCustomer);
 
-    result = pthread_mutex_unlock(&teller_mutex);
-  }
-  else
-  {
-    printf ("pthread_mutex_lock(&teller_mutex) failed: %d\n", result);
-  }
+  metrics_getCustTransactionTime(delay_transactionTime);
+  metrics_getCustQueueWaitTime(time_custWaitInQueue); //sending the customers time in queue to be evaluated for metrics
+  metrics_getCustomerServed(teller->teller_id);
+  metrics_getTellerWaitTimeMax((int)time_tellerWaitForCustomer);
+  metrics_getTellerWaitTimeSum((int)time_tellerWaitForCustomer);
 }
 
 teller_t* teller_createTeller(void)

@@ -12,9 +12,8 @@
  *********************************************
  */
 #include <stdlib.h>
-#include "metrics.h"
-#include "queue.h"
 #include <stdio.h>
+#include "metrics.h"
 
 // Definitions
 #define TELLER0_ID                                     (0)
@@ -22,17 +21,17 @@
 #define TELLER2_ID                                     (2)
 
 // Variables
-static int maxCustWaitTime = 0;
-static int custWaitTimeTotal = 0;
+static int maxCustWaitTime    = 0;
+static int custWaitTimeTotal  = 0;
 static double avgCustWaitTime = 0;
 
-static int maxCustTransactionTime = 0;
-static int custTransactionTimeTotal = 0;
-static int avgCustTransactionTime = 0;
+static int    maxCustTransactionTime   = 0;
+static int    custTransactionTimeTotal = 0;
+static double avgCustTransactionTime   = 0;
 
 static int maxQueueDepth = 0;
 
-static int sum_customersServed = 0;
+static int sum_customersServed         = 0;
 static int sum_customersServed_teller0 = 0;
 static int sum_customersServed_teller1 = 0;
 static int sum_customersServed_teller2 = 0;
@@ -50,9 +49,9 @@ void metrics_getMetrics(void)
 {
   // print out all metric here
   printf("1. The total number of customers serviced during the day      : %d\n", sum_customersServed);
-  printf("2. Customers served by Teller 1, 2, and 3 respectively        : Teller1: %d Teller2: %d Teller3: %d\n", sum_customersServed_teller0, sum_customersServed_teller1, sum_customersServed_teller2);
+  printf("2. Customers served by Teller 1, 2, and 3 respectively        : Teller1 = %d Teller2 = %d Teller3 = %d\n", sum_customersServed_teller0, sum_customersServed_teller1, sum_customersServed_teller2);
   printf("3. The average time each customer spends waiting in the queue : %d\n", (int)avgCustWaitTime);
-  printf("4. The average time each customer spends with the teller      : %d\n", avgCustTransactionTime);
+  printf("4. The average time each customer spends with the teller      : %d\n", (int)avgCustTransactionTime);
   printf("5. The average time tellers wait for customers                : %d\n", (int)avg_timeTellerWait);
   printf("6. The maximum customer wait time in the queue                : %d\n", maxCustWaitTime);
   printf("7. The maximum wait time for tellers waiting for customers    : %d\n", max_timeTellerWait);
@@ -101,11 +100,11 @@ void metrics_getCustomerServed(int whichTeller)
   {
     sum_customersServed_teller0 += 1;
   }
-  else if (whichTeller ==TELLER1_ID)
+  else if (whichTeller == TELLER1_ID)
   {
     sum_customersServed_teller1 += 1;
   }
-  else if (whichTeller ==TELLER2_ID)
+  else if (whichTeller == TELLER2_ID)
   {
     sum_customersServed_teller2 += 1;
   }

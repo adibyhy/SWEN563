@@ -24,7 +24,6 @@
 typedef struct teller
 {
   int              current_customer;
-  int              time_tellerWaitForCustMax;
   int              teller_id;
   struct timespec* time_custEnterQueue;
   struct timespec* time_custMeetTeller;
