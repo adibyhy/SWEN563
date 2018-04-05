@@ -19,6 +19,7 @@
 #define TELLER0_ID                                     (0)
 #define TELLER1_ID                                     (1)
 #define TELLER2_ID                                     (2)
+#define TIME_MILLITOSIMULATIONMINUTE                   (100)
 
 // Variables
 static int maxCustWaitTime    = 0;
@@ -50,12 +51,12 @@ void metrics_getMetrics(void)
   // print out all metric here
   printf("1. The total number of customers serviced during the day      : %d\n", sum_customersServed);
   printf("2. Customers served by Teller 1, 2, and 3 respectively        : Teller1 = %d Teller2 = %d Teller3 = %d\n", sum_customersServed_teller0, sum_customersServed_teller1, sum_customersServed_teller2);
-  printf("3. The average time each customer spends waiting in the queue : %d\n", (int)avgCustWaitTime);
-  printf("4. The average time each customer spends with the teller      : %d\n", (int)avgCustTransactionTime);
-  printf("5. The average time tellers wait for customers                : %d\n", (int)avg_timeTellerWait);
-  printf("6. The maximum customer wait time in the queue                : %d\n", maxCustWaitTime);
-  printf("7. The maximum wait time for tellers waiting for customers    : %d\n", max_timeTellerWait);
-  printf("8. The maximum transaction time for the tellers               : %d\n", maxCustTransactionTime);
+  printf("3. The average time each customer spends waiting in the queue : %f\n", avgCustWaitTime/TIME_MILLITOSIMULATIONMINUTE);
+  printf("4. The average time each customer spends with the teller      : %f\n", avgCustTransactionTime/TIME_MILLITOSIMULATIONMINUTE);
+  printf("5. The average time tellers wait for customers                : %f\n", avg_timeTellerWait/TIME_MILLITOSIMULATIONMINUTE);
+  printf("6. The maximum customer wait time in the queue                : %f\n", (float)maxCustWaitTime/TIME_MILLITOSIMULATIONMINUTE);
+  printf("7. The maximum wait time for tellers waiting for customers    : %f\n", (float)max_timeTellerWait/TIME_MILLITOSIMULATIONMINUTE);
+  printf("8. The maximum transaction time for the tellers               : %f\n", (float)maxCustTransactionTime/TIME_MILLITOSIMULATIONMINUTE);
   printf("9. The maximum depth of the customer queue                    : %d\n", maxQueueDepth);
 
 }

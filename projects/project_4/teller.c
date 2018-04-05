@@ -31,7 +31,7 @@ pthread_mutex_t teller_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Function prototypes
 double teller_getTimeDifference(struct timespec* current, struct timespec* old);
-int teller_getSimulationTime(int time);
+int    teller_getSimulationTime(int time);
 
 // Start
 
