@@ -20,13 +20,14 @@
 #include <time.h>
 #include <unistd.h>
 #include "teller.h"
+#include "metrics.h"
 
 // Definitions
 #define TIME_NANOTOSECOND                              (1000000000.0)    // convert time in nanosecond to second
 #define TIME_NANOTOMILLI                               (1000000L)       // convert time in nanosecond to nanosecond
 #define TIME_SECTOMILLI                                (1000)           // conver time in second to millisecond
 #define TIME_CONVERTTO_SIMULATIONMILLISECOND           (1.6666666666667f)
-#define PRINT_DEBUG_MESSAGE                            (1)
+#define PRINT_DEBUG_MESSAGE                            (0)
 
 // Variables
 pthread_mutex_t teller_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -73,6 +74,7 @@ void teller_runTeller(queue_t* queue, teller_t* teller, struct timespec* time_cu
     teller->time_custMeetTeller = time_meetTeller;
     time_custWaitInQueue        = teller_getTimeDifference(teller->time_custMeetTeller, time_custEnterQueue)*TIME_SECTOMILLI;
 
+    metrics_getQueueMaxDepth(queue->size);
     teller->current_customer = queue_front(queue);
     queue_dequeue(queue);
     delay(teller_getDelayTime(teller->current_customer)-1);
@@ -88,6 +90,10 @@ void teller_runTeller(queue_t* queue, teller_t* teller, struct timespec* time_cu
     printf("TellerID %d: Queue wait time : %f \n", teller->teller_id, time_custWaitInQueue);
     printf("TellerID %d: Transaction time: %d \n", teller->teller_id, teller->current_customer);
 #endif
+    metrics_getCustQueueWaitTime(time_custWaitInQueue); //sending the customers time in queue to be evaluated for metrics
+    metrics_getCustomerServed(teller->teller_id);
+    metrics_getTellerWaitTimeMax((int)time_tellerWaitForCustomer);
+    metrics_getTellerWaitTimeSum((int)time_tellerWaitForCustomer);
 
     result = pthread_mutex_unlock(&teller_mutex);
   }

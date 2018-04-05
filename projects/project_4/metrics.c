@@ -14,18 +14,128 @@
 #include <stdlib.h>
 #include "metrics.h"
 #include "queue.h"
+#include <stdio.h>
 
 // Definitions
+#define TELLER0_ID                                     (0)
+#define TELLER1_ID                                     (1)
+#define TELLER2_ID                                     (2)
 
 // Variables
+static int maxCustWaitTime = 0;
+static int custWaitTimeTotal = 0;
+static double avgCustWaitTime = 0;
 
+static int maxCustTransactionTime = 0;
+static int custTransactionTimeTotal = 0;
+static int avgCustTransactionTime = 0;
+
+static int maxQueueDepth = 0;
+
+static int sum_customersServed = 0;
+static int sum_customersServed_teller0 = 0;
+static int sum_customersServed_teller1 = 0;
+static int sum_customersServed_teller2 = 0;
+
+static double avg_timeTellerWait = 0;
+static int    max_timeTellerWait = 0;
+static int    sum_timeTellerWait = 0;
 
 // Function prototypes
 
 
 // Start
 
-void metrics_getMetrics(queue_t* queue)
+void metrics_getMetrics(void)
 {
   // print out all metric here
+  printf("1. The total number of customers serviced during the day      : %d\n", sum_customersServed);
+  printf("2. Customers served by Teller 1, 2, and 3 respectively        : Teller1: %d Teller2: %d Teller3: %d\n", sum_customersServed_teller0, sum_customersServed_teller1, sum_customersServed_teller2);
+  printf("3. The average time each customer spends waiting in the queue : %d\n", (int)avgCustWaitTime);
+  printf("4. The average time each customer spends with the teller      : %d\n", avgCustTransactionTime);
+  printf("5. The average time tellers wait for customers                : %d\n", (int)avg_timeTellerWait);
+  printf("6. The maximum customer wait time in the queue                : %d\n", maxCustWaitTime);
+  printf("7. The maximum wait time for tellers waiting for customers    : %d\n", max_timeTellerWait);
+  printf("8. The maximum transaction time for the tellers               : %d\n", maxCustTransactionTime);
+  printf("9. The maximum depth of the customer queue                    : %d\n", maxQueueDepth);
+
 }
+
+
+void metrics_getCustQueueWaitTime(int timeSpentInQueue)// 3,6
+{
+  if(timeSpentInQueue > maxCustWaitTime) //checking if time in queue is greater than current max
+  {
+    maxCustWaitTime = timeSpentInQueue;  // setting new max queue wait time
+  }
+
+  custWaitTimeTotal = custWaitTimeTotal + timeSpentInQueue; //getting the total time of all customers waiting in queue
+}
+
+void metrics_getCustTransactionTime(int transactionTime)//4,8
+{
+  if(transactionTime > maxCustTransactionTime) //checking if transaction time is greater than current max
+  {
+    maxCustTransactionTime = transactionTime;  // setting new max transaction time
+  }
+
+  custTransactionTimeTotal = custTransactionTimeTotal + transactionTime; //getting the total time of all customers transaction time
+}
+
+void metrics_getQueueMaxDepth(int queueSize)//9
+{
+  if(queueSize > maxQueueDepth) //checking if queue size is greater than current max
+  {
+    maxQueueDepth = queueSize;  // setting new max queue size
+  }
+}
+
+void metrics_getCustomerTotal(void)
+{
+  sum_customersServed = sum_customersServed_teller0 + sum_customersServed_teller1 + sum_customersServed_teller2;
+}
+
+void metrics_getCustomerServed(int whichTeller)
+{
+  if (whichTeller == TELLER0_ID)
+  {
+    sum_customersServed_teller0 += 1;
+  }
+  else if (whichTeller ==TELLER1_ID)
+  {
+    sum_customersServed_teller1 += 1;
+  }
+  else if (whichTeller ==TELLER2_ID)
+  {
+    sum_customersServed_teller2 += 1;
+  }
+}
+
+void metrics_getTellerWaitTimeMax(int tellerWaitTime)
+{
+  if (tellerWaitTime > max_timeTellerWait)
+  {
+    max_timeTellerWait = tellerWaitTime;
+  }
+}
+
+void metrics_getTellerWaitTimeSum(int tellerWaitTime)
+{
+  sum_timeTellerWait += tellerWaitTime;
+}
+
+void metrics_getTellerWaitTimeAvg(void)
+{
+  avg_timeTellerWait = sum_timeTellerWait / sum_customersServed;
+}
+
+void metrics_getCustQueueWaitTimeAvg(void)
+{
+  avgCustWaitTime = custWaitTimeTotal / sum_customersServed;
+}
+void metrics_getCustTransactionTimeAvg(void)
+{
+  avgCustTransactionTime = custTransactionTimeTotal / sum_customersServed;
+}
+
+

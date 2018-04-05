@@ -23,6 +23,7 @@
 #include <sys/neutrino.h>
 #include "queue.h"
 #include "teller.h"
+#include "metrics.h"
 
 // Definitions
 #define THREADS_MAX                                    (4)                // Number of threads to be created
@@ -33,9 +34,6 @@
 #define TIME_CONVERTTO_SIMULATIONMILLISECOND           (1.6666666666667f)
 #define TIME_MILLISECONDTONANO                         (1000000L)    // convert time in millisecond to nanosecond
 #define BUSINESS_HOURS                                 (42000)  // in millisecond, 42 second = 7 hours 0900-1600
-#define CLOCKID                                        CLOCK_REALTIME
-#define SIG                                            SIGUSR1
-#define CODE_TIMER                                     (1)       // pulse from timer
 #define TELLER0_ID                                     (0)
 #define TELLER1_ID                                     (1)
 #define TELLER2_ID                                     (2)
@@ -49,16 +47,6 @@ teller_t*       g_teller1;
 teller_t*       g_teller2;
 static bool     g_bank_open = false;
 struct timespec time_cust_enterQueue;
-//static bool     g_runTeller = false;
-int             chid;  // channel ID (global)
-
-typedef union
-{
-  // a message can be either from a client, or a pulse
-  struct _pulse   pulse;
-} MessageT;
-
-
 
 // Function prototypes
 void    thread_create(void);
@@ -67,7 +55,6 @@ void*   threadFn_teller0(void* arg);
 void*   threadFn_teller1(void* arg);
 void*   threadFn_teller2(void* arg);
 int     RNG_get(int lower, int upper);
-static  void setupPulseAndTimer (void);
 
 // Start
 
@@ -82,43 +69,6 @@ int RNG_get(int lower, int upper)
   rand_scaled    = (rand_num * range) + lower;
 
   return rand_scaled;
-}
-
-void setupPulseAndTimer (void)
-{
-  timer_t             timerid;    // timer ID for timer
-  struct sigevent     event;      // event to deliver
-  struct itimerspec   timer;      // the timer data structure
-  int                 coid;       // connection back to ourselves
-
-  // create a connection back to ourselves
-  coid = ConnectAttach (0, 0, chid, 0, 0);
-  if (coid == -1)
-  {
-    fprintf (stderr, "couldn't ConnectAttach to self!\n");
-    perror (NULL);
-    exit (EXIT_FAILURE);
-  }
-
-  // set up the kind of event that we want to deliver -- a pulse
-  SIGEV_PULSE_INIT (&event, coid, SIGEV_PULSE_PRIO_INHERIT, CODE_TIMER, 0);
-
-  // create the timer, binding it to the event
-  if (timer_create (CLOCK_REALTIME, &event, &timerid) == -1)
-  {
-    fprintf (stderr, "couldn't create a timer, errno %d\n", errno);
-    perror (NULL);
-    exit (EXIT_FAILURE);
-  }
-
-  // setup the timer
-  timer.it_value.tv_sec = 0;
-  timer.it_value.tv_nsec = 999999999;
-  timer.it_interval.tv_sec = 0;
-  timer.it_interval.tv_nsec = 999999999;
-
-  // and start it!
-  timer_settime (timerid, 0, &timer, NULL);
 }
 
 void thread_create(void)
@@ -150,9 +100,6 @@ void* threadFn_queue(void* arg)
   int   newCust_transactionTime;
   float delay_time;
 
-//  int rcvid;              // process ID of the sender
-//  MessageT msg;           // the message itself
-
   printf("This is threadFn_queue(), thread number is %d\n", (int) arg);
 
   while (1)
@@ -170,29 +117,18 @@ void* threadFn_queue(void* arg)
         delay((int)(delay_time-1.0));  // wait for customer to get into queue
 
         queue_enqueue(g_queue, newCust_transactionTime);  // add new customer to the queue
-//        g_runTeller = true;
+        metrics_getCustTransactionTime(newCust_transactionTime);
 
 #if PRINT_DEBUG_MESSAGE
 //        printf("Queue thread: Arrival time    : %d\n", newCust_arrivalTime);
         printf("Queue thread: Transaction time: %d\n", newCust_transactionTime);
         printf("Queue thread: Queue wait time : %f\n", delay_time);
 #endif
-        // determine who the message came from
-//        rcvid = MsgReceive (chid, &msg, sizeof (msg), NULL);
-//        if (rcvid == 0)
-//        {
-//          //printf("Got at pulse\n");
-//          g_runTeller = true;
-//        }
-//        else  // if (rcvid == 0)
-//        {
-//          printf("Didn't get pulse\n");;
-//        }
 
         result = pthread_mutex_unlock(&mutex);
         if (result == EOK)
         {
-          system(0);
+          //system(0);
         }
         else
         {
@@ -228,7 +164,6 @@ void* threadFn_teller0(void* arg)
       if (g_queue->size > 0)
       {
         teller_runTeller(g_queue, g_teller0, &time_cust_enterQueue);
-//        g_runTeller = false;
       }
       result = pthread_mutex_unlock(&mutex);
       if (result == EOK)
@@ -263,7 +198,6 @@ void* threadFn_teller1(void* arg)
       if (g_queue->size > 0)
       {
         teller_runTeller(g_queue, g_teller1, &time_cust_enterQueue);
-//        g_runTeller = false;
       }
       result = pthread_mutex_unlock(&mutex);
       if (result == EOK)
@@ -298,7 +232,6 @@ void* threadFn_teller2(void* arg)
       if (g_queue->size > 0)
       {
         teller_runTeller(g_queue, g_teller2, &time_cust_enterQueue);
-//        g_runTeller = false;
       }
       result = pthread_mutex_unlock(&mutex);
       if (result == EOK)
@@ -332,15 +265,6 @@ int main(int argc, char *argv[])
   teller_initTeller(g_teller1, TELLER1_ID);
   teller_initTeller(g_teller2, TELLER2_ID);
 
-//  if ((chid = ChannelCreate (0)) == -1)
-//  {
-//    fprintf (stderr, "couldn't create channel!\n");
-//    perror (NULL);
-//    exit (EXIT_FAILURE);
-//  }
-
-//  setupPulseAndTimer();
-
   printf("Welcome to the Bank Flow Simulator!\n");
 
   g_bank_open = true;
@@ -349,6 +273,13 @@ int main(int argc, char *argv[])
   delay(BUSINESS_HOURS);  // 42 = 0900-1600 business hours
   g_bank_open = false;
   printf("Bank is now closed!\n");
+  printf("Here are todays metrics\n");
+
+  metrics_getCustomerTotal();
+  metrics_getTellerWaitTimeAvg();
+  metrics_getCustQueueWaitTimeAvg();
+  metrics_getCustTransactionTimeAvg();
+  metrics_getMetrics();
 
   return EXIT_SUCCESS;
 }
