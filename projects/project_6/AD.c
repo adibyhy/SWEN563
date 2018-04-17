@@ -25,20 +25,22 @@
 #define PORT_LENGTH                      (1)  // 1 Byte
 
 #define BASE_ADDRESS                     (0x280)
-#define REG_ADDRESS_COMMAND              (BASE_ADDRESS + 0x0)
-#define REG_ADDRESS_PAGE                 (BASE_ADDRESS + 0x1)
+#define REG_ADDRESS_COMMAND              (BASE_ADDRESS + 0x0)  // Read: LSB
+#define REG_ADDRESS_PAGE                 (BASE_ADDRESS + 0x1)  // Read: MSB
 #define REG_ADDRESS_ADCHANNEL            (BASE_ADDRESS + 0x2)
-#define REG_ADDRESS_ADGAINSCAN           (BASE_ADDRESS + 0x3)
+#define REG_ADDRESS_ADGAINSCAN           (BASE_ADDRESS + 0x3)  // Read: Analog input status
 #define REG_ADDRESS_INTERRUPTCOUNTER     (BASE_ADDRESS + 0x4)
+#define REG_ADDRESS_PORTA                (BASE_ADDRESS + 0x8)
+#define REG_ADDRESS_IOCONTROL            (BASE_ADDRESS + 0xB)
 #define REG_ADDRESS_ADMODECONFIG         (BASE_ADDRESS + 0xD)  // IMPORTANT: Set page register to page 2 first
-#define REG_ADDRESS_LSB                  (BASE_ADDRESS + 0x0)  // LSB and MSB have the same address as COMMAND and PAGE
-#define REG_ADDRESS_MSB                  (BASE_ADDRESS + 0x1)
 
 #define ADWAIT_ADDRESS                   (0x20)
 #define ADBUSY_ADDRESS                   (0x80)
 
 #define INPUT_VOLTAGE_POSITIVE           (5.0f)
 #define INPUT_VOLTAGE_NEGATIVE           (-5.0f)
+
+#define SCALE_AD                         (521.0f)
 
 // Variables
 uintptr_t regHandle_command;
@@ -47,15 +49,19 @@ uintptr_t regHandle_ADchannel;
 uintptr_t regHandle_ADgainscan;
 uintptr_t regHandle_interruptCounter;
 uintptr_t regHandle_ADmodeconfig;
+uintptr_t regHandle_portA;
+uintptr_t regHandle_iocontrol;
 
 
 // Function prototypes
 uintptr_t   AD_accessRegister(uint64_t address);
 int         AD_checkADstatus(uint64_t address);
 int         AD_setSingleEndedBipolarRange(void);
-int         AD_convertMeasurementToVolt(int ADdata);
+double      AD_convertMeasurementToVolt(int16_t ADdata);
 int         AD_startMeasurement(void);
-double      AD_getMeasurement(void);
+int16_t     AD_getMeasurement(void);
+uint8_t     AD_scaleADvalue(int16_t ADdata);
+int         AD_sendADtoExternal(uint8_t AD);
 
 // Start
 
@@ -106,7 +112,8 @@ int AD_mapAllRegisters(void)
   regHandle_ADgainscan        = AD_accessRegister(REG_ADDRESS_ADGAINSCAN);
   regHandle_interruptCounter  = AD_accessRegister(REG_ADDRESS_INTERRUPTCOUNTER);
   regHandle_ADmodeconfig      = AD_accessRegister(REG_ADDRESS_ADMODECONFIG);
-
+  regHandle_portA             = AD_accessRegister(REG_ADDRESS_PORTA);
+  regHandle_iocontrol         = AD_accessRegister(REG_ADDRESS_IOCONTROL);
   return 0;
 }
 
@@ -114,9 +121,10 @@ int AD_initAD(void)
 {
   AD_setSingleEndedBipolarRange();
   out8(regHandle_command, 0x77);  // clear command register without starting a new AD conversion
-  out8(regHandle_ADgainscan, 0x00);  // set gain to use 10V range
+  out8(regHandle_ADgainscan, 0x01);  // set gain to use 10V range
   out8(regHandle_interruptCounter, 0x00);  // set AINTE bit to off (no interrupt)
-  out8(regHandle_ADchannel, 0x11);  // use only one channel in both low and high channels
+  out8(regHandle_iocontrol, 0x00);  // set port A direction to output
+  out8(regHandle_ADchannel, 0x00);  // use only one channel in both low and high channels
   // do a wait because it takes some time to complete the channel selection
   AD_checkADstatus(ADWAIT_ADDRESS);  // read status register and wait
 
@@ -128,7 +136,7 @@ int AD_checkADstatus(uint64_t address) // returns 0 if ok, -1 if error
   int i;
   for (i = 0; i < 20000; i++)
   {
-    if (!(in8(BASE_ADDRESS+3) & address))
+    if (!(in8(regHandle_ADgainscan) & address))
       {
         return (EOK);
       }
@@ -140,8 +148,9 @@ int AD_checkADstatus(uint64_t address) // returns 0 if ok, -1 if error
 int AD_startAD(void)
 {
   int     result = EOK;
-  int     ADdata;
+  int16_t ADdata;
   double  voltage;
+  int8_t  ADscaled;
 
   while (1)
   {
@@ -155,11 +164,10 @@ int AD_startAD(void)
         printf("AD: Error, voltage exceeded constraint!\n");
         break;
       }
-      printf("Voltage: %f\n", voltage);
-    }
-    else
-    {
-      printf("AD status timeout\n");
+//      printf("Voltage : %f\n", voltage);
+      printf("AD value: %d\n", (uint8_t)ADdata);
+//      ADscaled = AD_scaleADvalue(ADdata);
+//      AD_sendADtoExternal(ADscaled);
     }
   }
   return 0;
@@ -175,32 +183,57 @@ int AD_startMeasurement(void)
   return result;
 }
 
-double AD_getMeasurement(void)
+int16_t AD_getMeasurement(void)
 {
-  uint8_t   lsb;
-  uint8_t   msb;
-  double    ADdata;
+  int       lsb;
+  int       msb;
+  int16_t   ADdata;
 
-  lsb = in8(REG_ADDRESS_LSB);
-  msb = in8(REG_ADDRESS_MSB);
+  lsb = in8(regHandle_command);
+  msb = in8(regHandle_page);
 
-  ADdata = (msb*256) + lsb;
+  ADdata = ((msb*256) + lsb) & 0xffff;
 
   return ADdata;
 }
 
-int AD_convertMeasurementToVolt(int ADdata)
+double AD_convertMeasurementToVolt(int16_t ADdata)
 {
-  int voltage;
+  double voltage;
 
-  voltage = (ADdata/32768)*INPUT_VOLTAGE_POSITIVE;
+  voltage = (ADdata/32768.0)*INPUT_VOLTAGE_POSITIVE;
 
   return voltage;
 
 }
 
+uint8_t AD_scaleADvalue(int16_t ADdata)
+{
+  uint8_t    ADscaled;
+  uint16_t   AD;
 
+  AD = ADdata;
+  if (ADdata < 0)
+  {
+    AD = abs(ADdata);
+  }
+  else
+  {
+    AD = 0;
+  }
 
+  ADscaled   = AD/SCALE_AD;
 
+  printf("scaled: %d\n", ADscaled);
+
+  return ADscaled;
+}
+
+int AD_sendADtoExternal(uint8_t AD)
+{
+  out8(regHandle_portA, AD);
+
+  return 0;
+}
 
 
