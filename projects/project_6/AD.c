@@ -40,8 +40,6 @@
 #define INPUT_VOLTAGE_POSITIVE           (5.0f)
 #define INPUT_VOLTAGE_NEGATIVE           (-5.0f)
 
-#define SCALE_AD                         (521.0f)
-
 // Variables
 uintptr_t regHandle_command;
 uintptr_t regHandle_page;
@@ -97,9 +95,9 @@ uintptr_t  AD_accessRegister(uint64_t address)
 
 int AD_setSingleEndedBipolarRange(void)
 {
-  out8(regHandle_page, 0x02);  // write to page 2
+  out8(regHandle_page, 0x02);          // write to page 2
   out8(regHandle_ADmodeconfig, 0x00);  // set to single ended bipolar
-  out8(regHandle_page, 0x00);  // reset back to page 0
+  out8(regHandle_page, 0x00);          // reset back to page 0
 
   return 0;
 }
@@ -114,6 +112,7 @@ int AD_mapAllRegisters(void)
   regHandle_ADmodeconfig      = AD_accessRegister(REG_ADDRESS_ADMODECONFIG);
   regHandle_portA             = AD_accessRegister(REG_ADDRESS_PORTA);
   regHandle_iocontrol         = AD_accessRegister(REG_ADDRESS_IOCONTROL);
+
   return 0;
 }
 
@@ -137,9 +136,9 @@ int AD_checkADstatus(uint64_t address) // returns 0 if ok, -1 if error
   for (i = 0; i < 20000; i++)
   {
     if (!(in8(regHandle_ADgainscan) & address))
-      {
-        return (EOK);
-      }
+    {
+      return (EOK);
+    }
   }
   printf("AD status timeout\n");
   return(-1);
@@ -150,7 +149,7 @@ int AD_startAD(void)
   int     result = EOK;
   int16_t ADdata;
   double  voltage;
-  int8_t  ADscaled;
+  uint8_t ADscaled;
 
   while (1)
   {
@@ -164,10 +163,11 @@ int AD_startAD(void)
         printf("AD: Error, voltage exceeded constraint!\n");
         break;
       }
-//      printf("Voltage : %f\n", voltage);
-      printf("AD value: %d\n", (uint8_t)ADdata);
-//      ADscaled = AD_scaleADvalue(ADdata);
-//      AD_sendADtoExternal(ADscaled);
+//       printf("Voltage : %f\n", voltage);
+//       printf("AD value: %d\n", ADdata);
+      ADscaled = AD_scaleADvalue(ADdata);
+      printf("AD scaled: %d\n", ADscaled);
+      AD_sendADtoExternal(ADscaled);
     }
   }
   return 0;
@@ -210,21 +210,10 @@ double AD_convertMeasurementToVolt(int16_t ADdata)
 uint8_t AD_scaleADvalue(int16_t ADdata)
 {
   uint8_t    ADscaled;
-  uint16_t   AD;
+  double     tmp;
 
-  AD = ADdata;
-  if (ADdata < 0)
-  {
-    AD = abs(ADdata);
-  }
-  else
-  {
-    AD = 0;
-  }
-
-  ADscaled   = AD/SCALE_AD;
-
-  printf("scaled: %d\n", ADscaled);
+  tmp       = ((ADdata + 32767 + 15000)*19)/65535.0;  // Minimum AD value = 4, maximum AD value = 23
+  ADscaled  = (int32_t)tmp & 0x3f;
 
   return ADscaled;
 }
