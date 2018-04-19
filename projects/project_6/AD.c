@@ -212,7 +212,7 @@ uint8_t AD_scaleADvalue(int16_t ADdata)
   uint8_t    ADscaled;
   double     tmp;
 
-  tmp       = ((ADdata + 32767 + 15000)*19)/65535.0;  // Minimum AD value = 4, maximum AD value = 23
+  tmp       = ((ADdata + 32767)*65)/65535.0;  // Minimum AD value = 4, maximum AD value = 23
   ADscaled  = (int32_t)tmp & 0x3f;
 
   return ADscaled;
