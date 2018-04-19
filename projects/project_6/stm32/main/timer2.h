@@ -17,18 +17,12 @@
 
 #include "SysClock.h"
 
-// Defines
-#define SERVO_0                     (0)
-#define SERVO_1                     (1)
-
-
 void  timer2_pwm_init(void);
-int   get_voltage(void);
+void  timer5_init(void);
+void  timer5_delay(void);
+int   get_AD(void);
+int   scale_AD(int AD);
 void  timer2_init_pin_GPIOE(void);
-int   scaled_voltage(int pin_voltage);
 void  timer2_pwm_setPulseWidth(uint8_t pulse_width);
 
 #endif /* ndef __timer2_h */
-
-
-

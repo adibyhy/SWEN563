@@ -20,14 +20,10 @@
 
 #define PRESCALER_VALUE           (8000)  // 0.1 milliseconds per count
 #define PWM_PULSE_PERIOD          (200)
+#define DELAY_COUNT               (1000)   // 100 milliseconds
 
-#define PULSEWIDTH_POS_0          (4)
-#define PULSEWIDTH_POS_1          (8)
-#define PULSEWIDTH_POS_2          (10)
-#define PULSEWIDTH_POS_3          (13)
-#define PULSEWIDTH_POS_4          (16)
-#define PULSEWIDTH_POS_5          (24)
-
+#define PULSEWIDTH_POS_MIN         (4)
+#define PULSEWIDTH_POS_MAX         (24)
 
 // Function prototypes
 void timer2_EGR_UpdateRegisters(void);
@@ -38,15 +34,40 @@ void timer2_init_output_compare(void);
 void timer2_outputCompare_Start(void);
 void timer2_outputCompare_Stop(void);
 void timer2_pwm_setPulsePeriod(uint16_t pulse_period);
+void timer5_EGR_UpdateRegisters(void);
+void timer5_init_timer5(void);
+
+void timer5_delay(void)
+{
+  timer5_EGR_UpdateRegisters();
+  TIM5->SR &= ~TIM_SR_UIF;  // Clear the update event flag
+  TIM5->ARR = DELAY_COUNT;
+  // Loop until the update event flag is set
+  while (!(TIM5->SR & TIM_SR_UIF));
+  // The required time delay has been elapsed
+  // User code can be executed
+}
+
+void timer5_init_timer5(void)
+{
+  RCC->APB1ENR1 |= RCC_APB1ENR1_TIM5EN;     // enable TIM3 clock
+  TIM5->PSC      = PRESCALER_VALUE;         // load prescaler value
+  TIM5->CR1     |= TIM_CR1_CEN;             // Enable counter
+  timer5_EGR_UpdateRegisters();
+}
+
+void timer5_init(void)
+{
+  timer5_init_timer5();
+}
 
 void timer2_init_pin_A0(void)
 {
   RCC->AHB2ENR   |= RCC_AHB2ENR_GPIOAEN;   // enable clock for A group of GPIO
   GPIOA->MODER   &= ~GPIO_MODER_MODER0;    // Clear moder 0 bits
   GPIOA->MODER   &= ~GPIO_MODER_MODER0_1;  // enables input mode for middle button joystick
-  // GPIOA->AFR[0]  |= 0;
   GPIOA->PUPDR   &= ~0x3;                  // set to pull down
-	GPIOA->PUPDR   |= 0x2;
+  GPIOA->PUPDR   |= 0x2;
 }
 
 void timer2_init_pin_A1(void)
@@ -58,7 +79,7 @@ void timer2_init_pin_A1(void)
 
 void timer2_init_pin_GPIOE()
 {
-	RCC->AHB2ENR   |= RCC_AHB2ENR_GPIOEEN;   // enable clock for E group of GPIO
+  RCC->AHB2ENR   |= RCC_AHB2ENR_GPIOEEN;   // enable clock for E group of GPIO
   GPIOE->MODER   &= 0x000FFFFF;            // Clear bits PE15 -> PE10
 }
 
@@ -69,22 +90,18 @@ void timer2_init_timer2(void)
   timer2_EGR_UpdateRegisters();
 }
 
+void timer5_EGR_UpdateRegisters(void)
+{
+  TIM5->EGR |= 1;  // Force update generation
+}
+
 void timer2_EGR_UpdateRegisters(void)
 {
-  TIM2->EGR |= 1;                 // Force update generation
+  TIM2->EGR |= 1;  // Force update generation
 }
 
 void timer2_init_output_compare(void)//
 {
-  /*
-  TIM2->CCMR1 &= ~TIM_CCMR1_OC1M;    // Clear OC1M bits
-  TIM2->CCMR1 |= 0x60;               // Set PWM mode 1
-  TIM2->CCMR1 |= TIM_CCMR1_OC1PE;    // Enable output compare 1 preload
-  TIM2->CR1   |= TIM_CR1_ARPE;       // Enable auto-reload of preload
-  TIM2->CCER  &= ~TIM_CCER_CC1P;     // Output polarity OC1 active high
-  TIM2->CCER  |= TIM_CCER_CC1E;      // Enable OC1 output on pin 
-  */
-  
   TIM2->CCMR1 &= ~TIM_CCMR1_OC2M;    // Clear OC2M bits
   TIM2->CCMR1 |= 0x6000;             // Set PWM mode 1
   TIM2->CCMR1 |= TIM_CCMR1_OC2PE;    // Enable output compare 2 preload
@@ -113,13 +130,13 @@ void timer2_pwm_init(void)
   timer2_outputCompare_Start();
   
   timer2_pwm_setPulsePeriod(PWM_PULSE_PERIOD);
-  timer2_pwm_setPulseWidth(PULSEWIDTH_POS_0);
+  timer2_pwm_setPulseWidth(PULSEWIDTH_POS_MIN);
 }
 
 void timer2_pwm_setPulseWidth(uint8_t pulse_width)
 {
   uint8_t count = pulse_width;  // determines the duty cycle. Min: 4(~2%), max: 20(~10%)
-	TIM2->CCR2 = count;
+  TIM2->CCR2 = count;
   timer2_EGR_UpdateRegisters();
 }
 
@@ -130,60 +147,59 @@ void timer2_pwm_setPulsePeriod(uint16_t pulse_period)
   timer2_EGR_UpdateRegisters();
 }
 
-int get_voltage(){ 
-	  //read once int16_t val = (GPIOE->IDR &0xffff) 
-	  int pe15_bit, pe14_bit, pe13_bit, pe12_bit, pe11_bit, pe10_bit;
-    int voltage = 0;
-	
-	  //int16_t val = (GPIOE->IDR & 0xffff); //change to read once then add the voltage
-	  //int32_t x = val... x= x + 32k.... (x*20)/64k 
-	  //need to convert from signed to unsigned
-	  //val = val&0x3f
-	  //val = val ^0x20
-	
-    pe15_bit  =   (GPIOE->IDR & 0x8000);
-    pe14_bit  =   (GPIOE->IDR & 0x4000);
-    pe13_bit  =   (GPIOE->IDR & 0x2000);
-    pe12_bit  =   (GPIOE->IDR & 0x1000);
-    pe10_bit  =   (GPIOE->IDR & 0x400); 
-    pe11_bit  =   (GPIOE->IDR & 0x800); 
-	
-    if (pe15_bit > 0){
-      voltage+=1;
-    }
-    if (pe14_bit > 0){
-      voltage+=2;
-    }
-    if (pe13_bit > 0){
-      voltage+=4;
-    }
-    if (pe12_bit > 0){
-      voltage+=8;
-    }
-    if (pe10_bit > 0){
-      voltage+=16;
-    }
-    if (pe11_bit > 0){
-      voltage+=32;
-    }	
-    
-  return voltage;		
+int get_AD()
+{ 
+  int pe15_bit, pe14_bit, pe13_bit, pe12_bit, pe11_bit, pe10_bit;
+  int AD = 0;
+
+  pe15_bit  =   (GPIOE->IDR & 0x8000);
+  pe14_bit  =   (GPIOE->IDR & 0x4000);
+  pe13_bit  =   (GPIOE->IDR & 0x2000);
+  pe12_bit  =   (GPIOE->IDR & 0x1000);
+  pe10_bit  =   (GPIOE->IDR & 0x400); 
+  pe11_bit  =   (GPIOE->IDR & 0x800); 
+
+  if (pe15_bit > 0)  // least significant bit
+  {
+    AD+=1;
+  }
+  if (pe14_bit > 0)
+  {
+    AD+=2;
+  }
+  if (pe13_bit > 0)
+  {
+    AD+=4;
+  }
+  if (pe12_bit > 0)
+  {
+    AD+=8;
+  }
+  if (pe10_bit > 0)
+  {
+    AD+=16;
+  }
+  if (pe11_bit > 0)  // most significant bit
+  {
+    AD+=32;
+  }
+
+  return AD;
 }
 
-int scaled_voltage(int pin_voltage)
+int scale_AD(int AD)
 {
-	int new_voltage = pin_voltage;
-	  
-  if (new_voltage < PULSEWIDTH_POS_0)
+  int pulse_width = AD;
+    
+  if (pulse_width < PULSEWIDTH_POS_MIN)
   {
-    new_voltage = PULSEWIDTH_POS_0;
+    pulse_width = PULSEWIDTH_POS_MIN;
+  }
+  else if(pulse_width > PULSEWIDTH_POS_MAX)
+  {
+    pulse_width = PULSEWIDTH_POS_MAX;
   }
   
-  else if(new_voltage > PULSEWIDTH_POS_5)
-  {
-    new_voltage = PULSEWIDTH_POS_5;
-  }
-	
-	return new_voltage;
+  return pulse_width;
 }
 
