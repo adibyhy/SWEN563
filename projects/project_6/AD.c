@@ -225,4 +225,3 @@ int AD_sendADtoExternal(uint8_t AD)
   return 0;
 }
 
-
