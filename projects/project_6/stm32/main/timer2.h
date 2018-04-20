@@ -23,6 +23,6 @@ void  timer5_delay(void);
 int   get_AD(void);
 int   scale_AD(int AD);
 void  timer2_init_pin_GPIOE(void);
-void  timer2_pwm_setPulseWidth(uint8_t pulse_width);
+void  timer2_pwm_setPulseWidth(uint16_t pulse_width);
 
 #endif /* ndef __timer2_h */

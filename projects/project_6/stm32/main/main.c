@@ -67,7 +67,7 @@ int main (void)
       USART_Write(USART2, (uint8_t *)buffer, sizeof(buffer));
       #endif  // PRINT_AD
       
-      timer5_delay();  // 100 msec delay for 20ms period
+      timer5_delay();  // small delay to ensure period is 20 millisecond
     }
   }
 

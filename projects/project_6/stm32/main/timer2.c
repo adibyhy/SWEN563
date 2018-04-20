@@ -18,12 +18,12 @@
 #include "stm32l476xx.h"
 #include "timer2.h"
 
-#define PRESCALER_VALUE           (8000)  // 0.1 milliseconds per count
-#define PWM_PULSE_PERIOD          (200)
-#define DELAY_COUNT               (1000)   // 100 milliseconds
+#define PRESCALER_VALUE           (79)  // 1 microsecond per count
+#define PWM_PULSE_PERIOD          (20000)  // 20 millisecond
+#define DELAY_COUNT               (20000)
 
-#define PULSEWIDTH_POS_MIN         (4)
-#define PULSEWIDTH_POS_MAX         (24)
+#define PULSEWIDTH_POS_MIN         (400)
+#define PULSEWIDTH_POS_MAX         (2000)
 
 // Function prototypes
 void timer2_EGR_UpdateRegisters(void);
@@ -50,7 +50,7 @@ void timer5_delay(void)
 
 void timer5_init_timer5(void)
 {
-  RCC->APB1ENR1 |= RCC_APB1ENR1_TIM5EN;     // enable TIM3 clock
+  RCC->APB1ENR1 |= RCC_APB1ENR1_TIM5EN;     // enable TIM5 clock
   TIM5->PSC      = PRESCALER_VALUE;         // load prescaler value
   TIM5->CR1     |= TIM_CR1_CEN;             // Enable counter
   timer5_EGR_UpdateRegisters();
@@ -133,17 +133,15 @@ void timer2_pwm_init(void)
   timer2_pwm_setPulseWidth(PULSEWIDTH_POS_MIN);
 }
 
-void timer2_pwm_setPulseWidth(uint8_t pulse_width)
+void timer2_pwm_setPulseWidth(uint16_t pulse_width)
 {
-  uint8_t count = pulse_width;  // determines the duty cycle. Min: 4(~2%), max: 20(~10%)
-  TIM2->CCR2 = count;
+  TIM2->CCR2 = pulse_width;  // determines the duty cycle. Min: 4(~2%), max: 20(~10%)
   timer2_EGR_UpdateRegisters();
 }
 
 void timer2_pwm_setPulsePeriod(uint16_t pulse_period)
 {
-  uint16_t count = pulse_period;
-  TIM2->ARR = count;
+  TIM2->ARR = pulse_period;
   timer2_EGR_UpdateRegisters();
 }
 
@@ -189,16 +187,7 @@ int get_AD()
 
 int scale_AD(int AD)
 {
-  int pulse_width = AD;
-    
-  if (pulse_width < PULSEWIDTH_POS_MIN)
-  {
-    pulse_width = PULSEWIDTH_POS_MIN;
-  }
-  else if(pulse_width > PULSEWIDTH_POS_MAX)
-  {
-    pulse_width = PULSEWIDTH_POS_MAX;
-  }
+  int pulse_width = (AD*25)+400;
   
   return pulse_width;
 }
