@@ -25,11 +25,5 @@ int main(int argc, char *argv[])
   AD_initAD();
   AD_startAD();
 
-
-
-
-
-
-
-	return EXIT_SUCCESS;
+  return EXIT_SUCCESS;
 }
