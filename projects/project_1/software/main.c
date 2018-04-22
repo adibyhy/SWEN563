@@ -21,20 +21,20 @@
 
 int main(void)
 {
-	int error = OK;
+  int error = OK;
 	
-	System_Clock_Init(); // Switch System Clock = 80 MHz
+  System_Clock_Init(); // Switch System Clock = 80 MHz
   UART2_Init();
   inputCapture_Init();  // Initiate POST
   error = post_start();
-	
-	if (error < OK)
-	{
+
+  if (error < OK)
+  {
     USART_Write(USART2, (uint8_t *)"Error occured\r\n", 15);
     return (0);
-	}
+  }
   
   display_main();
   
-	return (0);
+  return (0);
 }
