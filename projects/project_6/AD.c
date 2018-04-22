@@ -119,13 +119,13 @@ int AD_mapAllRegisters(void)
 int AD_initAD(void)
 {
   AD_setSingleEndedBipolarRange();
-  out8(regHandle_command, 0x77);  // clear command register without starting a new AD conversion
-  out8(regHandle_ADgainscan, 0x01);  // set gain to use 10V range
+  out8(regHandle_command, 0x77);           // clear command register without starting a new AD conversion
+  out8(regHandle_ADgainscan, 0x01);        // set gain to use 10V range
   out8(regHandle_interruptCounter, 0x00);  // set AINTE bit to off (no interrupt)
-  out8(regHandle_iocontrol, 0x00);  // set port A direction to output
-  out8(regHandle_ADchannel, 0x00);  // use only one channel in both low and high channels
+  out8(regHandle_iocontrol, 0x00);         // set port A direction to output
+  out8(regHandle_ADchannel, 0x00);         // use only one channel in both low and high channels
   // do a wait because it takes some time to complete the channel selection
-  AD_checkADstatus(ADWAIT_ADDRESS);  // read status register and wait
+  AD_checkADstatus(ADWAIT_ADDRESS);        // read status register and wait
 
   return 0;
 }
@@ -212,7 +212,7 @@ uint8_t AD_scaleADvalue(int16_t ADdata)
   uint8_t    ADscaled;
   double     tmp;
 
-  tmp       = ((ADdata + 32767)*65)/65535.0;  // Minimum AD value = 4, maximum AD value = 23
+  tmp       = ((ADdata + 32767)*65)/65535.0;  // Minimum AD value = 0, maximum AD value = 63
   ADscaled  = (int32_t)tmp & 0x3f;
 
   return ADscaled;
