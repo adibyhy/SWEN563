@@ -50,7 +50,7 @@ int pulse_limit_change(void)
   char rxByte;
   char input[ARRAY_SIZE];
   unsigned int input_int;
-	int cnt = 0;
+  int cnt = 0;
   
   USART_Write(USART2, (uint8_t *)"\r\nChange limits? (Y/N)\r\n", 24);
   
@@ -63,12 +63,12 @@ int pulse_limit_change(void)
   {
     USART_Write(USART2, (uint8_t *)"Enter lower limit:\r\n", 20);
 
-	  while (rxByte != '\r')
-	  {
-	    rxByte = USART_Read(USART2);
-	    input[cnt] = rxByte;
+    while (rxByte != '\r')
+    {
+      rxByte = USART_Read(USART2);
+      input[cnt] = rxByte;
       cnt++;
-	  }
+    }
     
     input[cnt] = '\0';  // insert NULL into the last index
     
@@ -99,7 +99,6 @@ int display_limits(void)
   
   memset(buffer, 0, sizeof(buffer));  // clear array
   
-  
   sprintf(buffer, "%u", pulse_lower_limit);  // convert from int to string
   USART_Write(USART2, (uint8_t *)"\r\nLower limit: ", 15);
   USART_Write(USART2, (uint8_t *)buffer, sizeof(buffer));
@@ -129,11 +128,11 @@ int display_counter_value(unsigned int counter[], int size)
   int i;
   for (i = 1; i <= size; i++)
   {
-		if (counter[i] > 0)
-		{
-		memset(buffer, 0, sizeof(buffer));  // clear array
-		sprintf(buffer, "%u", (pulse_lower_limit + i));  // convert from int to string
-		USART_Write(USART2, (uint8_t *)"\r\nTime: ", 8);
+    if (counter[i] > 0)
+    {
+    memset(buffer, 0, sizeof(buffer));  // clear array
+    sprintf(buffer, "%u", (pulse_lower_limit + i));  // convert from int to string
+    USART_Write(USART2, (uint8_t *)"\r\nTime: ", 8);
     USART_Write(USART2, (uint8_t *)buffer, sizeof(buffer));
       
     memset(buffer, 0, sizeof(buffer));  // clear array
@@ -150,11 +149,11 @@ void measurements_start(void)
   unsigned int counter_value_arr[BUCKETS_SIZE];
   int status                       = 0;
   int i                            = 0;
-	unsigned int curr_time           = 0;
+  unsigned int curr_time           = 0;
   unsigned int old_time            = 0;
   unsigned int result              = 0;
   
-	memset(counter_value_arr, 0, sizeof(counter_value_arr));
+  memset(counter_value_arr, 0, sizeof(counter_value_arr));
   inputCapture_Start();
   while (i < MEASUREMENTS_MAX_COUNT)
   { 
