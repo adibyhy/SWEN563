@@ -1,0 +1,11 @@
+--cpu Cortex-M4.fp --branchpatch=sdcomp-29491-629360
+".\objects\timer2.o"
+".\objects\main.o"
+".\objects\sysclock.o"
+".\objects\uart.o"
+".\objects\led.o"
+".\objects\startup_stm32l476xx.o"
+--strict --scatter ".\Objects\project2a.sct"
+--summary_stderr --info summarysizes --map --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list ".\Listings\project2a.map" -o .\Objects\project2a.axf
