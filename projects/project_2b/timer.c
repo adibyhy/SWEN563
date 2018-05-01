@@ -28,6 +28,14 @@
 #define SERVOID_1            (1)
 #define SERVO_MOVE_DELAY     (200000)
 
+#define PULSEWIDTH_POS_0  (6)
+#define PULSEWIDTH_POS_1  (8)
+#define PULSEWIDTH_POS_2  (10)
+#define PULSEWIDTH_POS_3  (13)
+#define PULSEWIDTH_POS_4  (16)
+#define PULSEWIDTH_POS_5  (18)
+
+
 // Variables
 static uintptr_t regHandle_portA;  // digital I/O port handle
 static uintptr_t regHandle_portB;  // digital I/O port handle
@@ -36,32 +44,30 @@ static uintptr_t regHandle_portB;  // digital I/O port handle
 static void    timer_set_system_clock_period(void);
 static void    timer_setup_dioA(void);
 static void    timer_setup_dioB(void);
-// static timer_t timer_create_pulse_timer(int *ptr_channel_id);
-// void           timer_start_timer(time_t timer_id, int timeOutSec, int timeOutNsec, int periodSec, int periodNsec);
 //void           timer_runPWM(int channel_id, int dutyCycle_count, int delay);
-void           timer_pwm_setPulseWidth(uint8_t servo, uint8_t pulse_width);
-void           timer_runPWM(int channel_id, int dutyCycle_count);
+//void           timer_pwm_setPulseWidth(uint8_t servo, uint8_t pulse_width);
+//void           timer_runPWM(int channel_id, int dutyCycle_count);
 
 void timer_pwm_setPulseWidth(uint8_t servo, uint8_t pulse_width)
 {
-  int dutyCycle_count = 0;
+  int channel_id = 0;
 
   if (servo == SERVOID_0)
   {
-    // output to port a, channel_id = 1
-    timer_runPWM(1, dutyCycle_count);
+    channel_id = 1;
   }
-  if (servo == SERVOID_1)
+  else if (servo == SERVOID_1)
   {
-    // output to port b, channel_id = 3
-    timer_runPWM(3, dutyCycle_count);
+    channel_id = 3;
   }
+  timer_runPWM(channel_id, pulse_width);
 }
 
 void timer_runPWM(int channel_id, int dutyCycle_count)
 {
   struct _pulse pulse ;
-  int counter;
+  static unsigned int pwm_pulse_counter = 0 ;
+  static unsigned int counter = 0;
 
   while (1)
   {
@@ -69,6 +75,9 @@ void timer_runPWM(int channel_id, int dutyCycle_count)
     if ( counter++ > 200 )  // wait for 20 ms for the period
     {
       counter = 0;
+
+//      if ( pwm_pulse_counter++ > 200 )  // count the number of pulses since last reset -- reset every 4 seconds
+//        pwm_pulse_counter = 0 ;
 
       if (channel_id == 1)
       {
@@ -81,6 +90,11 @@ void timer_runPWM(int channel_id, int dutyCycle_count)
     }
     else
     {
+//      int change_count = 5 ;
+//      if ( pwm_pulse_counter > 50 && pwm_pulse_counter < 100 )
+//        change_count = 10 ;
+//      else if ( pwm_pulse_counter >= 100 )
+//        change_count = 15 ;
       if ( counter > dutyCycle_count )    // set output high for the duty cycle.
       {
         if (channel_id == 1)
@@ -92,6 +106,18 @@ void timer_runPWM(int channel_id, int dutyCycle_count)
           out8( regHandle_portB, 0 ) ;    // Sets all the B digital output lines to 0
         }
       }
+//      if ( counter > change_count )    // set output high for the duty cycle.
+//      {
+//        if (channel_id == 1)
+//        {
+//          out8( regHandle_portA, 0xff ) ;    // Sets all the A digital output lines to 1
+//        }
+//        else
+//        {
+//          out8( regHandle_portB, 0xff ) ;    // Sets all the B digital output lines to 1
+//        }
+//      }
+
     }
 
   }

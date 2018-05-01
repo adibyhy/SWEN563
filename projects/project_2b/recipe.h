@@ -28,13 +28,6 @@
 #define LOOP             (0x60)
 #define END_LOOP         (0xA0)
 
-#define PULSEWIDTH_POS_0  (6)
-#define PULSEWIDTH_POS_1  (8)
-#define PULSEWIDTH_POS_2  (10)
-#define PULSEWIDTH_POS_3  (13)
-#define PULSEWIDTH_POS_4  (16)
-#define PULSEWIDTH_POS_5  (18)
-
 // Enum / struct
 typedef enum servo_positions
 {
@@ -94,6 +87,7 @@ typedef struct servo_data
   uint8_t           recipeLoopIndex;      // recipe loop index
   uint8_t           recipeLoopIteration;  // how many times loop should run
   uint8_t           recipeLoopError;
+  uint8_t           servo_id;
 }servo_t;
 
 
